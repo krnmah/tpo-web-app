@@ -1,0 +1,23 @@
+[
+  {
+    "name": "TCS",
+    "role": "Software Engineer",
+    "package": "6 LPA",
+    "criteria": "CGPA > 7.0",
+    "minCGPA": 7.0
+  },
+  {
+    "name": "Infosys",
+    "role": "System Engineer",
+    "package": "5.5 LPA",
+    "criteria": "CGPA > 6.5",
+    "minCGPA": 6.5
+  },
+  {
+    "name": "Amazon",
+    "role": "SDE Intern",
+    "package": "8 LPA",
+    "criteria": "CGPA > 8.0",
+    "minCGPA": 8.0
+  }
+]
