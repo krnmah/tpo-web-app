@@ -47,6 +47,7 @@ jobs:
         with:
           node-version: ${{ matrix.node-version }}
           cache: 'npm'
+          cache-dependency-path: tpo-portal-backend/package-lock.json
 
       # Step 3: Navigate to backend folder
       - name: Set working directory
