@@ -2,9 +2,13 @@
   "name": "tpo-portal-backend",
   "version": "1.0.0",
   "description": "",
-  "main": "index.js",
+  "main": "jest.config.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "dev": "cross-env NODE_ENV=development nodemon src/index.js",
+    "start": "node src/index.js",
+    "test": "jest --runInBand",
+    "migrate": "npx prisma migrate dev --name init",
+    "generate": "npx prisma generate"
   },
   "prisma": {
     "seed": "node prisma/seed.js"
@@ -12,20 +16,23 @@
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "type": "module",
+  "type": "commonjs",
   "dependencies": {
-    "@apollo/server": "^5.0.0",
-    "@prisma/client": "^6.17.1",
+    "@apollo/server": "^4.12.1",
     "bcryptjs": "^3.0.2",
-    "body-parser": "^2.2.0",
+    "body-parser": "^1.20.3",
     "cors": "^2.8.5",
-    "dotenv": "^17.2.3",
+    "dotenv": "^16.4.5",
     "express": "^5.1.0",
     "graphql": "^16.11.0",
     "jsonwebtoken": "^9.0.2",
-    "multer": "^2.0.2"
+    "multer": "^2.0.0"
   },
   "devDependencies": {
-    "prisma": "^6.17.1"
+    "@prisma/client": "^6.17.1",
+    "cross-env": "^10.1.0",
+    "jest": "^30.2.0",
+    "prisma": "^6.17.1",
+    "supertest": "^7.1.4"
   }
 }

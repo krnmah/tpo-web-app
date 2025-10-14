@@ -1,22 +1,24 @@
-import { PrismaClient } from '../generated/prisma/index.js';
-const prisma = new PrismaClient();
+const prisma = require('../src/config/prismaClient');
 
 async function main() {
-    await prisma.student.create({
-        data: {
-            name: "Karan Maheshwari",
-            enrollmentNumber: "2022BCSE023",
-            email: "karan_2022bcse023@nitsri.ac.in",
-            password: "hashed_password_here",
-            department: "CSE",
-            batch: 2022,
-            tenthMarksheet: "/uploads/10th.pdf",
-            twelfthMarksheet: "/uploads/12th.pdf",
-            resume: "/uploads/resume.pdf",
-            profilePicture: "/uploads/profile.jpg",
-            isActivated: true,
-        },
-    });
+  await prisma.student.createMany({
+    data: [
+      {
+        name: "Test Student",
+        enrollmentNumber: "ENR001",
+        email: "test@nitsri.ac.in",
+        password: "hashedpassword",
+        department: "CSE",
+        batch: 2025,
+        tenthMarksheet: "/files/tenth.pdf",
+        twelfthMarksheet: "/files/twelfth.pdf",
+        resume: "/files/resume.pdf",
+        profilePicture: "/files/profile.jpg",
+        isActivated: true
+      }
+    ],
+    skipDuplicates: true
+  });
 }
 
 main()
