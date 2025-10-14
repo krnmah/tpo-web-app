@@ -4,10 +4,12 @@ const { ApolloServer } = require('@apollo/server');
 const { expressMiddleware } = require('@apollo/server/express4');
 const bodyParser = require('body-parser');
 const schema = require('../graphql/schema');
+const prisma = require('../config/prismaClient');
 
 let app;
 
 beforeAll(async () => {
+  // Start Apollo Server
   const server = new ApolloServer({ schema });
   await server.start();
 
@@ -19,14 +21,23 @@ beforeAll(async () => {
 describe('Student GraphQL', () => {
   let studentId;
   let token;
+  let email;
+  let enrollmentNumber;
+
+  // Before all tests in this suite, generate unique email/enrollment
+  beforeAll(() => {
+    const random = Date.now();
+    email = `john${random}@nitsri.ac.in`;
+    enrollmentNumber = `EN${random}`;
+  });
 
   it('registers a student', async () => {
     const mutation = `
       mutation {
         registerStudent(
           name: "John Doe",
-          enrollmentNumber: "EN12345",
-          email: "john@college.edu",
+          enrollmentNumber: "${enrollmentNumber}",
+          email: "${email}",
           password: "password123",
           department: "CSE",
           batch: 2025,
@@ -61,7 +72,7 @@ describe('Student GraphQL', () => {
   it('logs in the student', async () => {
     const mutation = `
       mutation {
-        loginStudent(email: "john@college.edu", password: "password123") {
+        loginStudent(email: "${email}", password: "password123") {
           token
           student {
             id
@@ -113,4 +124,13 @@ describe('Student GraphQL', () => {
     expect(res.statusCode).toBe(200);
     expect(res.body.data.activateStudent.isActivated).toBe(true);
   });
+
+  // Cleanup: delete only the student created in this test
+  afterAll(async () => {
+    if (studentId) {
+      await prisma.student.delete({ where: { id: parseInt(studentId, 10) } });
+    }
+    await prisma.$disconnect();
+  });
+
 });
