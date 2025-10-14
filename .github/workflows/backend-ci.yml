@@ -35,6 +35,7 @@ jobs:
 
     env:
       DATABASE_URL: postgresql://postgres:postgres@localhost:5432/tnp_portal
+      JWT_SECRET: replace_with_a_strong_secret
 
     steps:
       # Step 1: Checkout repo
@@ -53,10 +54,18 @@ jobs:
       - name: Install dependencies
         run: npm install
         working-directory: ./tpo-portal-backend
+
+      # Step 5: Wait for Postgres
+      - name: Wait for Postgres
+        run: |
+          until pg_isready -h localhost -p 5432 -U postgres; do
+            echo "Waiting for Postgres..."
+            sleep 1
+          done
       
       # Step 4: Resting Migration in Prisma
       - name: Resting and Migrating
-        run: npm run resetmigrate
+        run: npm run resetdb
         working-directory: ./tpo-portal-backend
 
       # Step 5: Generate Prisma Client
