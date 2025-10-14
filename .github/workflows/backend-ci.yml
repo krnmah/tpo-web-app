@@ -1,0 +1,68 @@
+name: Backend CI
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'tpo-portal-backend/**'      # only trigger if backend files change
+  pull_request:
+    branches: [main]
+    paths:
+      - 'tpo-portal-backend/**'      # only trigger if PR affects backend
+
+jobs:
+  backend-tests:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: tnp_portal
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    strategy:
+      matrix:
+        node-version: [22.x]
+
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/tnp_portal
+
+    steps:
+      # Step 1: Checkout repo
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      # Step 2: Setup Node.js
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'npm'
+
+      # Step 3: Navigate to backend folder
+      - name: Set working directory
+        run: cd tpo-portal-backend
+
+      # Step 4: Install dependencies
+      - name: Install dependencies
+        run: npm install
+        working-directory: ./tpo-portal-backend
+
+      # Step 5: Generate Prisma Client
+      - name: Prisma generate
+        run: npm run generate
+        working-directory: ./tpo-portal-backend
+
+      # Step 6: Run tests
+      - name: Run Jest tests
+        run: npm run test
+        working-directory: ./tpo-portal-backend
