@@ -131,6 +131,7 @@ describe('Student GraphQL', () => {
       await prisma.student.delete({ where: { id: parseInt(studentId, 10) } });
     }
     await prisma.$disconnect();
+    //hello
   });
 
 });
