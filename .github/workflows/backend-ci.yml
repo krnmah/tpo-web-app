@@ -49,13 +49,14 @@ jobs:
           cache: 'npm'
           cache-dependency-path: tpo-portal-backend/package-lock.json
 
-      # Step 3: Navigate to backend folder
-      - name: Set working directory
-        run: cd tpo-portal-backend
-
-      # Step 4: Install dependencies
+      # Step 3: Install dependencies
       - name: Install dependencies
         run: npm install
+        working-directory: ./tpo-portal-backend
+      
+      # Step 4: Resting Migration in Prisma
+      - name: Resting and Migrating
+        run: npm run resetmigrate
         working-directory: ./tpo-portal-backend
 
       # Step 5: Generate Prisma Client
