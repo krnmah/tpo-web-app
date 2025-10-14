@@ -63,8 +63,8 @@ jobs:
             sleep 1
           done
       
-      # Step 4: Resting Migration in Prisma
-      - name: Resting and Migrating
+      # Step 4: Reseting Migration in Prisma
+      - name: Reseting and Migrating
         run: npm run resetdb
         working-directory: ./tpo-portal-backend
 
