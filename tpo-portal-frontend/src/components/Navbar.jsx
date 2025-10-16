@@ -1,19 +1,27 @@
-import { useAuth } from "../context/AuthContext";
+// src/components/Navbar.jsx
+import { Link } from "react-router-dom";
 
 const Navbar = () => {
-  const { user } = useAuth();
   return (
-    <header className="bg-white shadow p-4 flex justify-between items-center">
-      <h1 className="text-xl font-semibold text-gray-700">Student Dashboard</h1>
-      <div className="flex items-center gap-3">
-        <span className="text-gray-600">{user.name}</span>
-        <img
-          src={`https://ui-avatars.com/api/?name=${user.name}&background=0D8ABC&color=fff`}
-          alt="avatar"
-          className="w-8 h-8 rounded-full"
-        />
+    <nav className="bg-blue-700 text-white p-4 shadow-md">
+      <div className="max-w-7xl mx-auto flex justify-between items-center">
+        <h1 className="text-xl font-bold">🎓 T&P Portal</h1>
+        <div className="space-x-4">
+          <Link
+            to="/login"
+            className="bg-white text-blue-700 px-4 py-2 rounded-lg font-medium hover:bg-blue-100 transition"
+          >
+            Login
+          </Link>
+          <Link
+            to="/student/register"
+            className="border border-white px-4 py-2 rounded-lg font-medium hover:bg-white hover:text-blue-700 transition"
+          >
+            Register
+          </Link>
+        </div>
       </div>
-    </header>
+    </nav>
   );
 };
 
