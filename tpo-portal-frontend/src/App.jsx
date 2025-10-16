@@ -1,37 +1,52 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import Home from "./pages/Home";
-import StudentLogin from "./pages/student/StudentLogin";
+import Login from "./pages/Login";
 import StudentLayout from "./pages/student/StudentLayout";
 import Profile from "./pages/student/Profile";
 import AllCompanies from "./pages/student/AllCompanies";
 import EligibleCompanies from "./pages/student/EligibleCompanies";
 import Applications from "./pages/student/ApplicationTracker";
+import StudentRegister from "./pages/student/StudentRegister";
+import CompleteProfile from "./pages/student/CompleteProfile";
+
+// Optional: Admin and CRC dashboards (you’ll add these later)
+// import AdminDashboard from "./pages/admin/AdminDashboard";
+// import CRCDashboard from "./pages/crc/CRCDashboard";
 
 function App() {
   return (
     <BrowserRouter>
       <Routes>
-        {/* Redirect from root ("/") to "/home" */}
+        {/* Root → redirect to /home */}
         <Route path="/" element={<Navigate to="/home" replace />} />
 
         {/* Homepage */}
         <Route path="/home" element={<Home />} />
 
-        {/* Student routes */}
-        <Route path="/student">
-          {/* Auth routes */}
-          <Route path="login" element={<StudentLogin />} />
-          {/* <Route path="register" element={<StudentRegister />} /> */}
+        {/* Universal login for all roles */}
+        <Route path="/login" element={<Login />} />
 
-          {/* Dashboard routes */}
-          <Route path="dashboard" element={<StudentLayout />}>
-            <Route index element={<Profile />} />
-            <Route path="profile" element={<Profile />} />
-            <Route path="all-companies" element={<AllCompanies />} />
-            <Route path="eligible-companies" element={<EligibleCompanies />} />
-            <Route path="applications" element={<Applications />} />
-          </Route>
+        {/* Student registration flow */}
+        <Route path="/student/register" element={<StudentRegister />} />
+        <Route path="/student/complete-profile" element={<CompleteProfile />} />
+
+        {/* Student dashboard layout */}
+        <Route path="/student/dashboard" element={<StudentLayout />}>
+          <Route index element={<Profile />} />
+          <Route path="profile" element={<Profile />} />
+          <Route path="all-companies" element={<AllCompanies />} />
+          <Route path="eligible-companies" element={<EligibleCompanies />} />
+          <Route path="applications" element={<Applications />} />
         </Route>
+
+        {/* CRC Dashboard */}
+        {/* <Route path="/crc/dashboard" element={<CRCDashboard />} /> */}
+
+        {/* Admin Dashboard */}
+        {/* <Route path="/admin/dashboard" element={<AdminDashboard />} /> */}
+
+        {/* Catch-all redirect (optional) */}
+        <Route path="*" element={<Navigate to="/home" replace />} />
       </Routes>
     </BrowserRouter>
   );
