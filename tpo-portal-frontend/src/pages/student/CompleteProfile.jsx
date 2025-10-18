@@ -1,162 +1,203 @@
-import { useState } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { useSearchParams, useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
+import api from "../../utils/axios";
 
-const departments = [
-  "Computer Science",
-  "Information Technology",
-  "Electronics",
-  "Mechanical",
-  "Civil",
-  "Electrical",
-];
+const departments = ["CSE", "ITE", "ECE", "EEE", " MME", "CIV", "MCH"]; // change to your list
+const currentYear = new Date().getFullYear();
+const years = Array.from({ length: 6 }, (_, i) => currentYear - i);
 
-const years = Array.from({ length: 6 }, (_, i) => 2025 - i);
-
-const CompleteProfile = () => {
-  const navigate = useNavigate();
-  const location = useLocation();
-  const { email, name, password } = location.state || {};
-
+export default function CompleteProfile() {
+  const [search] = useSearchParams();
+  const [loading, setLoading] = useState(false);
+  const token = search.get("token");
   const [form, setForm] = useState({
     enrollment: "",
     department: "",
     batch: "",
-    tenthMarksheet: null,
-    twelfthMarksheet: null,
+    tenth: null,
+    twelfth: null,
     resume: null,
-    profilePic: null,
+    profile: null,
   });
   const [preview, setPreview] = useState(null);
+  const navigate = useNavigate();
 
-  const handleChange = (e) => {
-    const { name, value, files } = e.target;
-    if (files) {
-      setForm({ ...form, [name]: files[0] });
-      if (name === "profilePic") {
-        setPreview(URL.createObjectURL(files[0]));
-      }
-    } else {
-      setForm({ ...form, [name]: value });
+  useEffect(() => {
+    toast("Complete your profile");
+    if (!token) {
+      toast.error("Invalid access");
+      navigate("/home");
     }
-  };
+  }, [token, navigate]);
 
-  const handleSubmit = async (e) => {
+  function handleFile(e) {
+    const { name, files } = e.target;
+    if (!files || files.length === 0) return;
+    setForm((prev) => ({ ...prev, [name]: files[0] }));
+    if (name === "profile") setPreview(URL.createObjectURL(files[0]));
+  }
+
+  function handleChange(e) {
+    const { name, value } = e.target;
+    setForm((prev) => ({ ...prev, [name]: value }));
+  }
+
+  async function handleSubmit(e) {
     e.preventDefault();
-    try {
-      // Upload data using FormData
-      // await completeRegistration(form, email, password);
-      toast.success("Profile completed successfully!");
-      navigate("/student/dashboard");
-    } catch (err) {
-      toast.error("Error completing profile. Try again.");
+    // client side validations (file types)
+    const allowedPdf = (f) => f && f.type === "application/pdf";
+    const allowedImage = (f) => f && f.type.startsWith("image/");
+    if (
+      !allowedPdf(form.tenth) ||
+      !allowedPdf(form.twelfth) ||
+      !allowedPdf(form.resume)
+    ) {
+      toast.error("Mark sheets and resume must be PDF");
+      return;
     }
-  };
+    if (!allowedImage(form.profile)) {
+      toast.error("Profile must be an image");
+      return;
+    }
+
+    const fd = new FormData();
+    fd.append("enrollmentNumber", form.enrollment);
+    fd.append("department", form.department);
+    fd.append("batch", form.batch);
+    fd.append("tenthMarksheet", form.tenth);
+    fd.append("twelfthMarksheet", form.twelfth);
+    fd.append("resume", form.resume);
+    fd.append("profilePicture", form.profile);
+
+    try {
+      setLoading(true);
+      const res = await api.post(`/api/student/complete`, fd, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+        params: {
+          token: encodeURIComponent(token),
+        },
+      });
+      if (res.status === 200) {
+        toast.success("Profile completed! Redirecting to login...");
+      }
+      // redirect to student /login
+      setTimeout(() => navigate("/login"), 1200);
+    } catch (err) {
+      if (err.response && err.response.data) {
+        toast.error(err.response.data.error || "Something went wrong!");
+      } else {
+        toast.error("Server not reachable!");
+      }
+    } finally{
+      setLoading(false);
+    }
+  }
 
   return (
-    <div className="flex justify-center min-h-screen bg-gray-100">
+    <div className="min-h-screen flex items-start justify-center bg-gray-100 p-6">
       <form
         onSubmit={handleSubmit}
-        className="bg-white p-8 rounded-2xl shadow-md w-full max-w-lg mt-10"
+        className="bg-white p-8 rounded-lg shadow-md w-full max-w-2xl mt-8"
       >
-        <h2 className="text-2xl font-bold mb-6 text-center text-blue-700">
-          Complete Your Profile
-        </h2>
+        <h2 className="text-2xl font-bold mb-4">Complete Profile</h2>
 
-        <div className="flex flex-col items-center mb-6">
-          <label
-            htmlFor="profilePic"
-            className="cursor-pointer w-32 h-32 border rounded-full overflow-hidden bg-gray-50 flex items-center justify-center"
-          >
+        <div className="flex items-center gap-4 mb-4">
+          <label className="w-28 h-28 bg-gray-100 flex items-center justify-center rounded-full overflow-hidden cursor-pointer">
             {preview ? (
-              <img src={preview} alt="Profile" className="w-full h-full object-cover" />
+              <img
+                src={preview}
+                alt="p"
+                className="w-full h-full object-cover"
+              />
             ) : (
-              <span className="text-gray-500">Upload</span>
+              <span>Upload</span>
             )}
+            <input
+              type="file"
+              name="profile"
+              accept="image/*"
+              onChange={handleFile}
+              className="hidden"
+            />
           </label>
-          <input
-            id="profilePic"
-            name="profilePic"
-            type="file"
-            accept="image/*"
-            onChange={handleChange}
-            className="hidden"
-          />
+
+          <div className="flex-1">
+            <input
+              name="enrollment"
+              value={form.enrollment}
+              onChange={handleChange}
+              required
+              placeholder="Enrollment Number"
+              className="w-full mb-2 p-2 border rounded"
+            />
+            <select
+              name="department"
+              value={form.department}
+              onChange={handleChange}
+              required
+              className="w-full mb-2 p-2 border rounded"
+            >
+              <option value="">Select Department</option>
+              {departments.map((d) => (
+                <option key={d} value={d}>
+                  {d}
+                </option>
+              ))}
+            </select>
+            <select
+              name="batch"
+              value={form.batch}
+              onChange={handleChange}
+              required
+              className="w-full p-2 border rounded"
+            >
+              <option value="">Select Batch</option>
+              {years.map((y) => (
+                <option key={y} value={y}>
+                  {y}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
-
-        <input
-          type="text"
-          name="enrollment"
-          placeholder="Enrollment Number"
-          value={form.enrollment}
-          onChange={handleChange}
-          required
-          className="w-full mb-4 p-2 border rounded-lg"
-        />
-
-        <select
-          name="department"
-          value={form.department}
-          onChange={handleChange}
-          required
-          className="w-full mb-4 p-2 border rounded-lg"
-        >
-          <option value="">Select Department</option>
-          {departments.map((d) => (
-            <option key={d}>{d}</option>
-          ))}
-        </select>
-
-        <select
-          name="batch"
-          value={form.batch}
-          onChange={handleChange}
-          required
-          className="w-full mb-4 p-2 border rounded-lg"
-        >
-          <option value="">Select Batch</option>
-          {years.map((y) => (
-            <option key={y}>{y}</option>
-          ))}
-        </select>
 
         <div className="grid grid-cols-2 gap-4 mb-4">
           <input
             type="file"
-            name="tenthMarksheet"
+            name="tenth"
             accept="application/pdf"
-            onChange={handleChange}
+            onChange={handleFile}
             required
-            className="p-2 border rounded-lg"
           />
           <input
             type="file"
-            name="twelfthMarksheet"
+            name="twelfth"
             accept="application/pdf"
-            onChange={handleChange}
+            onChange={handleFile}
             required
-            className="p-2 border rounded-lg"
           />
         </div>
 
-        <input
-          type="file"
-          name="resume"
-          accept="application/pdf"
-          onChange={handleChange}
-          required
-          className="w-full mb-4 p-2 border rounded-lg"
-        />
+        <div className="mb-4">
+          <input
+            type="file"
+            name="resume"
+            accept="application/pdf"
+            onChange={handleFile}
+            required
+          />
+        </div>
 
         <button
           type="submit"
-          className="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition"
+          className="bg-blue-600 text-white p-2 rounded w-full"
         >
-          Complete Registration
+          {loading ? "Creating..." : "Submit"}
         </button>
       </form>
     </div>
   );
-};
-
-export default CompleteProfile;
+}
