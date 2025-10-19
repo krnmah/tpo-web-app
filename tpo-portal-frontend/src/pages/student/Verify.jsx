@@ -29,7 +29,10 @@ export default function Verify() {
 
           setTimeout(() => {
             navigate(
-              `/student/complete-profile?token=${encodeURIComponent(token)}`
+              `/student/complete-profile?token=${encodeURIComponent(token)}`,
+              {
+                state: { email: res.data.email, name: res.data.name }
+              }
             );
           }, 3000);
         } else {

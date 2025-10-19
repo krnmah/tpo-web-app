@@ -1,8 +1,13 @@
 const express = require('express');
 const router = express.Router();
 const bcrypt = require('bcryptjs');
-const jwt = require('jsonwebtoken');
-const prisma = require('../config/prismaClient');
+const crypto = require('crypto');
+
+// models
+const Student = require('../models/Student');
+const TempUser = require('../models/TempUser');
+
+// utilities
 const { sendVerificationEmail } = require('../utils/mailer');
 const { isNitsriEmail } = require('../utils/validators');
 
@@ -27,7 +32,7 @@ router.post('/register', async (req, res, next) => {
       return next(err);
     }
 
-    const existing = await prisma.student.findUnique({ where: { email } });
+    const existing = await Student.findOne({ email });
     if (existing) {
       const err = new Error('Email already registered');
       err.status = 400;
@@ -35,15 +40,18 @@ router.post('/register', async (req, res, next) => {
       return next(err);
     }
 
+    const token = crypto.randomBytes(16).toString("hex");
+
     // Hash password before placing it in token for safety
     const hashed = await bcrypt.hash(password, 10);
 
     // Create a token with expiry 10 minutes
-    const token = jwt.sign(
-      { name, email, hashedPassword: hashed },
-      process.env.JWT_SECRET,
-      { expiresIn: '30m' }
-    );
+    await TempUser.create({
+      name: name,
+      email: email,
+      passwordHash: hashed,
+      token: token
+    })
 
     // Build verification link
     const link = `${process.env.FRONTEND_URL}/student/verify?token=${encodeURIComponent(token)}`;
@@ -62,7 +70,7 @@ router.post('/register', async (req, res, next) => {
 
 // GET /api/auth/verify?token=...
 // This endpoint is used by frontend to check token validity
-router.get('/verify', (req, res, next) => {
+router.get('/verify', async (req, res, next) => {
   try {
     const token = req.query.token;
     if (!token) {
@@ -72,22 +80,27 @@ router.get('/verify', (req, res, next) => {
       return next(err);
     }
 
-    let payload;
-    try {
-      payload = jwt.verify(token, process.env.JWT_SECRET);
-    } catch (err) {
+    const tempUser = await TempUser.findOne({token: token});
+    if (!tempUser) {
       const error = new Error('Token invalid or expired');
       error.status = 401;
       error.clientMessage = 'Verification link is invalid or has expired';
       return next(error);
     }
+    let message;
+    if(tempUser.verified){
+      message = "Email already verified. Fill details to complete registration.";
+    }else{
+      tempUser.verified = true;
+      message = "Email Verified Successfully. Complete Profile!!!";
+      await tempUser.save();
+    }
 
-    // return minimal payload (name & email) only
     return res.status(200).json({
       valid: true,
-      name: payload.name,
-      email: payload.email,
-      exp: payload.exp,
+      message: message,
+      name: tempUser.name,
+      email: tempUser.email
     });
 
   } catch (err) {

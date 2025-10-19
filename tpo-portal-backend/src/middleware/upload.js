@@ -3,7 +3,7 @@ const path = require('path');
 const fs = require('fs');
 
 const UPLOAD_DIR = 'uploads';
-const FILE_TYPES = ['tenthMarksheet', 'twelfthMarksheet', 'resume', 'profilePicture'];
+const FILE_TYPES = ['tenthMarksheet', 'twelfthMarksheet', 'resume', 'profilePicture', 'semMarksheet'];
 
 // create directories if not exist
 FILE_TYPES.forEach((dir) => {

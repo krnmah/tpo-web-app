@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useSearchParams, useNavigate } from "react-router-dom";
+import { useSearchParams, useNavigate, useLocation } from "react-router-dom";
 import toast from "react-hot-toast";
 import api from "../../utils/axios";
 
@@ -8,6 +8,8 @@ const currentYear = new Date().getFullYear();
 const years = Array.from({ length: 6 }, (_, i) => currentYear - i);
 
 export default function CompleteProfile() {
+  const location = useLocation();
+  const { email, name } = location.state || {};
   const [search] = useSearchParams();
   const [loading, setLoading] = useState(false);
   const token = search.get("token");
@@ -15,16 +17,19 @@ export default function CompleteProfile() {
     enrollment: "",
     department: "",
     batch: "",
+    cgpa: "",
+    twelfthPer: "",
+    tenthPer: "",
     tenth: null,
     twelfth: null,
     resume: null,
     profile: null,
+    sem: null,
   });
   const [preview, setPreview] = useState(null);
   const navigate = useNavigate();
 
   useEffect(() => {
-    toast("Complete your profile");
     if (!token) {
       toast.error("Invalid access");
       navigate("/home");
@@ -51,6 +56,7 @@ export default function CompleteProfile() {
     if (
       !allowedPdf(form.tenth) ||
       !allowedPdf(form.twelfth) ||
+      !allowedPdf(form.sem) ||
       !allowedPdf(form.resume)
     ) {
       toast.error("Mark sheets and resume must be PDF");
@@ -62,17 +68,23 @@ export default function CompleteProfile() {
     }
 
     const fd = new FormData();
+    fd.append("name", name);
+    fd.append("email", email);
     fd.append("enrollmentNumber", form.enrollment);
     fd.append("department", form.department);
     fd.append("batch", form.batch);
+    fd.append("cgpa", form.cgpa);
+    fd.append("twelfthPer", form.twelfthPer);
+    fd.append("tenthPer", form.tenthPer);
     fd.append("tenthMarksheet", form.tenth);
     fd.append("twelfthMarksheet", form.twelfth);
     fd.append("resume", form.resume);
     fd.append("profilePicture", form.profile);
+    fd.append("semMarksheet", form.sem);
 
     try {
       setLoading(true);
-      const res = await api.post(`/api/student/complete`, fd, {
+      const res = await api.post(`/api/student/complete-profile`, fd, {
         headers: {
           "Content-Type": "multipart/form-data",
         },
@@ -126,11 +138,51 @@ export default function CompleteProfile() {
 
           <div className="flex-1">
             <input
+              name="name"
+              value={name}
+              required
+              placeholder="Enter Name"
+              className="w-full mb-2 p-2 border rounded"
+              disabled
+            />
+            <input
+              name="email"
+              value={email}
+              required
+              placeholder="Enter Name"
+              className="w-full mb-2 p-2 border rounded"
+              disabled
+            />
+            <input
               name="enrollment"
               value={form.enrollment}
               onChange={handleChange}
               required
               placeholder="Enrollment Number"
+              className="w-full mb-2 p-2 border rounded"
+            />
+            <input
+              name="cgpa"
+              value={form.cgpa}
+              onChange={handleChange}
+              required
+              placeholder="Enter latest semester cgpa"
+              className="w-full mb-2 p-2 border rounded"
+            />
+            <input
+              name="twelfthPer"
+              value={form.twelfthPer}
+              onChange={handleChange}
+              required
+              placeholder="Enter twelfth class percentage(%)"
+              className="w-full mb-2 p-2 border rounded"
+            />
+            <input
+              name="tenthPer"
+              value={form.tenthPer}
+              onChange={handleChange}
+              required
+              placeholder="Enter tenth class percentage(%)"
               className="w-full mb-2 p-2 border rounded"
             />
             <select
@@ -185,6 +237,15 @@ export default function CompleteProfile() {
           <input
             type="file"
             name="resume"
+            accept="application/pdf"
+            onChange={handleFile}
+            required
+          />
+        </div>
+        <div className="mb-4">
+          <input
+            type="file"
+            name="sem"
             accept="application/pdf"
             onChange={handleFile}
             required

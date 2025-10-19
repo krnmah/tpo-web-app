@@ -2,8 +2,10 @@ const express = require('express');
 const bodyParser = require('body-parser');
 const cors = require('cors');
 const path = require('path');
+const connectDB = require('./config/db');
 const errorHandler = require('./middleware/errorHandler')
 require('dotenv').config();
+connectDB();
 
 const authRoutes = require('./routes/auth');
 const studentRoutes = require('./routes/student');
