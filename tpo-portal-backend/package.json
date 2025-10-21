@@ -6,34 +6,29 @@
   "scripts": {
     "dev": "cross-env NODE_ENV=development nodemon src/index.js",
     "start": "node src/index.js",
-    "test": "jest --runInBand",
-    "migrate": "npx prisma migrate dev --name init",
-    "generate": "npx prisma generate",
-    "resetdb": "npx prisma migrate reset --force"
-  },
-  "prisma": {
-    "seed": "node prisma/seed.js"
+    "test": "jest --runInBand"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "type": "commonjs",
   "dependencies": {
-    "@apollo/server": "^4.12.1",
     "bcryptjs": "^3.0.2",
     "body-parser": "^1.20.3",
     "cors": "^2.8.5",
+    "crypto": "^1.0.1",
     "dotenv": "^16.4.5",
     "express": "^5.1.0",
-    "graphql": "^16.11.0",
     "jsonwebtoken": "^9.0.2",
-    "multer": "^2.0.0"
+    "mongoose": "^8.19.1",
+    "multer": "^2.0.0",
+    "nodemailer": "^7.0.9"
   },
   "devDependencies": {
-    "@prisma/client": "^6.17.1",
     "cross-env": "^10.1.0",
     "jest": "^30.2.0",
-    "prisma": "^6.17.1",
+    "mongodb-memory-server": "^10.2.3",
+    "nodemon": "^3.0.1",
     "supertest": "^7.1.4"
   }
 }
