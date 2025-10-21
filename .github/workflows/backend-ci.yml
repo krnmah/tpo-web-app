@@ -1,5 +1,4 @@
 name: Backend CI
-
 on:
   push:
     branches: [main]
@@ -13,29 +12,14 @@ on:
 jobs:
   backend-tests:
     runs-on: ubuntu-latest
-
-    services:
-      postgres:
-        image: postgres:15
-        env:
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: tnp_portal
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-
     strategy:
       matrix:
         node-version: [22.x]
 
     env:
-      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/tnp_portal
+      DATABASE_URL: mongodb://root:password@localhost:27017/tnp_portal?authSource=admin
       JWT_SECRET: replace_with_a_strong_secret
+      FRONTEND_URL: http://localhost:5173
 
     steps:
       # Step 1: Checkout repo
@@ -55,25 +39,7 @@ jobs:
         run: npm install
         working-directory: ./tpo-portal-backend
 
-      # Step 5: Wait for Postgres
-      - name: Wait for Postgres
-        run: |
-          until pg_isready -h localhost -p 5432 -U postgres; do
-            echo "Waiting for Postgres..."
-            sleep 1
-          done
-      
-      # Step 4: Reseting Migration in Prisma
-      - name: Reseting and Migrating
-        run: npm run resetdb
-        working-directory: ./tpo-portal-backend
-
-      # Step 5: Generate Prisma Client
-      - name: Prisma generate
-        run: npm run generate
-        working-directory: ./tpo-portal-backend
-
-      # Step 6: Run tests
+      # Step 4: Run tests
       - name: Run Jest tests
         run: npm run test
         working-directory: ./tpo-portal-backend
