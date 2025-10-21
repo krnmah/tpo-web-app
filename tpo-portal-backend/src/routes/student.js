@@ -53,7 +53,10 @@ router.post('/complete-profile', cpUpload, async (req, res, next) => {
     
     // files
     const files = req.files || {};
-    if (!files.tenthMarksheet || !files.twelfthMarksheet || !files.resume || !files.profilePicture || !files.semMarksheet) {
+    const requiredFiles = ['tenthMarksheet','twelfthMarksheet','resume','semMarksheet','profilePicture'];
+
+    const missing = requiredFiles.filter(k => !Array.isArray(files[k]) || files[k].length === 0);
+    if (missing.length) {
       const err = new Error('Missing files');
       err.status = 400;
       err.clientMessage = 'All files (marksheets, resume, profile picture) are required';

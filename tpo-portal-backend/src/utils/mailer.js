@@ -11,7 +11,8 @@ const transporter = nodemailer.createTransport({
   },
 });
 
-async function sendVerificationEmail(toEmail, link) {
+async function sendVerificationEmail(toEmail, token) {
+  const link = `${process.env.FRONTEND_URL}/student/verify?token=${encodeURIComponent(token)}`;
   const info = await transporter.sendMail({
     from: `"no-reply | TPO Portal" ${process.env.FROM_EMAIL}`,
     to: toEmail,

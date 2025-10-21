@@ -53,11 +53,8 @@ router.post('/register', async (req, res, next) => {
       token: token
     })
 
-    // Build verification link
-    const link = `${process.env.FRONTEND_URL}/student/verify?token=${encodeURIComponent(token)}`;
-
     // send mail asynchronously
-    await sendVerificationEmail(email, link);
+    await sendVerificationEmail(email, token);
 
     return res.status(200).json({ message: 'Verification email sent' });
   } catch (err) {
