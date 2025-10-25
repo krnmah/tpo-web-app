@@ -16,7 +16,7 @@ export default function StudentRegister() {
     }
     try {
       setLoading(true);
-      const res = await api.post("/api/auth/register", form, {
+      const res = await api.post("/auth/register", form, {
         headers: { "Content-Type": "application/json" },
       });
       if (res.status === 200) {

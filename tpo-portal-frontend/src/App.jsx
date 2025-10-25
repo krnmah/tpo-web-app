@@ -10,6 +10,7 @@ import Applications from "./pages/student/ApplicationTracker";
 import StudentRegister from "./pages/student/StudentRegister";
 import Verify from "./pages/student/Verify";
 import CompleteProfile from "./pages/student/CompleteProfile";
+import ProtectedRoute from "./components/ProtectedRoute";
 
 // Optional: Admin and CRC dashboards (you’ll add these later)
 // import AdminDashboard from "./pages/admin/AdminDashboard";
@@ -33,14 +34,18 @@ function App() {
           {/* Student registration flow */}
           <Route path="/student/register" element={<StudentRegister />} />
           <Route path="/student/verify" element={<Verify />} />
-          <Route
-            path="/student/complete-profile"
-            element={<CompleteProfile />}
-          />
+          <Route path="/student/complete-profile" element={<CompleteProfile />} />
 
           {/* Student dashboard layout */}
-          <Route path="/student/dashboard" element={<StudentLayout />}>
-            <Route index element={<Profile />} />
+          <Route 
+            path="/student/dashboard"
+            element={
+              <ProtectedRoute allowedRoles={["student"]}>
+                <StudentLayout />
+              </ProtectedRoute>
+            }
+          >
+            <Route index element={<AllCompanies />} />
             <Route path="profile" element={<Profile />} />
             <Route path="all-companies" element={<AllCompanies />} />
             <Route path="eligible-companies" element={<EligibleCompanies />} />

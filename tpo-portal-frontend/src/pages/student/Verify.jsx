@@ -22,7 +22,7 @@ export default function Verify() {
       }
 
       try {
-        const res = await api.get("/api/auth/verify", { params: { token } });
+        const res = await api.get("/auth/verify", { params: { token } });
         if (res.status === 200 && res.data.valid) {
           setStatus("ok");
           toast.success(res.data.message || "Email verification completed");

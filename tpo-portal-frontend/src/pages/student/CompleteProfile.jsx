@@ -84,7 +84,7 @@ export default function CompleteProfile() {
 
     try {
       setLoading(true);
-      const res = await api.post(`/api/student/complete-profile`, fd, {
+      const res = await api.post('/student/complete-profile', fd, {
         headers: {
           "Content-Type": "multipart/form-data",
         },
