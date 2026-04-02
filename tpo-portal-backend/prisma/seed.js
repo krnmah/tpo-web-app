@@ -1,29 +1,34 @@
 const prisma = require('../src/config/prismaClient');
-const {hashPassword} = require('../src/utils/hash')
+const { hashPassword } = require('../src/utils/auth');
 
 async function main() {
-  let hashedPassword = await hashPassword("password");
-  await prisma.student.createMany({
-    data: [
-      {
-        name: "Test Student",
-        enrollmentNumber: "ENR001",
-        email: "test@nitsri.ac.in",
-        password: hashedPassword,
-        department: "CSE",
-        batch: 2025,
-        tenthMarksheet: "/files/tenth.pdf",
-        twelfthMarksheet: "/files/twelfth.pdf",
-        resume: "/files/resume.pdf",
-        profilePicture: "/files/profile.jpg",
-        isActivated: true
-      }
-    ],
-    skipDuplicates: true
+  console.log('🌱 Seeding database...');
+
+  // Create/Update Admin user with strong password
+  const adminPassword = await hashPassword('Admin@123');
+  const admin = await prisma.user.upsert({
+    where: { email: 'admin@nitsri.ac.in' },
+    update: {
+      password: adminPassword
+    },
+    create: {
+      email: 'admin@nitsri.ac.in',
+      password: adminPassword,
+      name: 'Admin User',
+      role: 'ADMIN'
+    }
   });
+  console.log('✅ Admin created/updated:', admin.email);
+
+  console.log('\n🎉 Seeding complete!');
+  console.log('\n📝 Login credentials:');
+  console.log('   👑 Admin:    admin@nitsri.ac.in / Admin@123');
 }
 
 main()
-    .then(() => console.log('Seed data added!'))
-    .catch(console.error)
-    .finally(() => prisma.$disconnect());
+  .then(() => prisma.$disconnect())
+  .catch((e) => {
+    console.error('❌ Seeding error:', e);
+    prisma.$disconnect();
+    process.exit(1);
+  });

@@ -1,6 +1,5 @@
 generator client {
   provider = "prisma-client-js"
-  output   = "../generated/prisma"
 }
 
 datasource db {
@@ -8,19 +7,102 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model Student {
-  id               Int      @id @default(autoincrement())
-  name             String
-  enrollmentNumber String   @unique
-  email            String   @unique
+enum Role {
+  ADMIN
+  STUDENT
+  CRC
+}
+
+enum ApplicationStatus {
+  APPLIED
+  SHORTLISTED
+  REJECTED
+  SELECTED
+}
+
+enum JobStatus {
+  OPEN
+  CLOSED
+}
+
+model User {
+  id               Int       @id @default(autoincrement())
+  email            String    @unique
   password         String
-  department       String
-  batch            Int
-  tenthMarksheet   String   // URL/path to PDF
-  twelfthMarksheet String   // URL/path to PDF
-  resume           String   // URL/path to PDF
-  profilePicture   String   // URL/path to JPG/JPEG/PNG
-  isActivated      Boolean  @default(false)
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+  role             Role      @default(STUDENT)
+  name             String
+  enrollmentNumber String?   @unique
+  branch           String?
+  cgpa             Float?
+  skills           String[]
+  resumeUrl        String?
+  reportCardUrl    String?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  @@index([email])
+  @@index([role])
+
+  assignedCompanies Company[]     @relation("CRCAssignments")
+  applications     Application[]
+}
+
+model Company {
+  id          Int      @id @default(autoincrement())
+  name        String
+  description String
+  assignedCRC Int?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([assignedCRC])
+
+  crc  User?  @relation("CRCAssignments", fields: [assignedCRC], references: [id])
+  jobs Job[]
+}
+
+model Job {
+  id             Int        @id @default(autoincrement())
+  title          String
+  companyId      Int
+  description    String?
+  minCgpa        Float
+  requiredSkills String[]
+  status         JobStatus  @default(OPEN)
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+
+  @@index([companyId])
+  @@index([status])
+
+  company      Company       @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  applications Application[]
+}
+
+model Application {
+  id        Int             @id @default(autoincrement())
+  studentId Int
+  jobId     Int
+  status    ApplicationStatus @default(APPLIED)
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+
+  @@unique([studentId, jobId])
+  @@index([studentId])
+  @@index([jobId])
+
+  student User @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  job     Job  @relation(fields: [jobId], references: [id], onDelete: Cascade)
+}
+
+model OTP {
+  id        Int      @id @default(autoincrement())
+  email     String
+  otpHash   String
+  expiry    DateTime
+  attempts  Int      @default(0)
+  used      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([email])
 }
