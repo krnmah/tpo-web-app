@@ -152,18 +152,17 @@ throw error;
         throw new Error('Only @nitsri.ac.in email addresses are allowed');
       }
 
-      // Check rate limit
-      checkOTPRateLimit(email);
-
-      // Check if user exists
+      // Check if user exists first (before rate limit check)
       const user = await prisma.user.findUnique({
         where: { email }
       });
 
       if (!user) {
-        // Don't reveal if email exists or not
-        return true;
+        throw new Error('This email is not registered. Please sign up first.');
       }
+
+      // Check rate limit
+      checkOTPRateLimit(email);
 
       // Generate OTP
       const otp = generateOTP();
@@ -274,6 +273,116 @@ throw error;
         }
         throw error;
       }
+    },
+
+    // Send email verification OTP for signup
+    sendEmailVerificationOTP: async (_, args) => {
+      const { email } = args;
+
+      // Validate email domain
+      if (!isValidEmailDomain(email)) {
+        throw new Error('Only @nitsri.ac.in email addresses are allowed');
+      }
+
+      // Check if email already exists
+      const existingUser = await prisma.user.findUnique({
+        where: { email }
+      });
+
+      if (existingUser) {
+        throw new Error('Email is already registered. Please login instead.');
+      }
+
+      // Check rate limit
+      checkOTPRateLimit(email);
+
+      // Generate OTP
+      const otp = generateOTP();
+      const otpHash = await hashOTP(otp);
+      const expiry = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes for signup
+
+      // Delete any existing OTPs for this email
+      await prisma.oTP.deleteMany({
+        where: { email }
+      });
+
+      // Store OTP
+      await prisma.oTP.create({
+        data: {
+          email,
+          otpHash,
+          expiry
+        }
+      });
+
+      // Send OTP email
+      const emailSent = await sendOTP(email, otp, 'email_verification');
+      logAuth.otpSent(email);
+
+      return emailSent;
+    },
+
+    // Verify email OTP during signup
+    verifyEmailOTP: async (_, args) => {
+      const { email, otp } = args;
+
+      // Validate email domain
+      if (!isValidEmailDomain(email)) {
+        throw new Error('Invalid email domain');
+      }
+
+      // Get the latest OTP for this email
+      const latestOTP = await prisma.oTP.findFirst({
+        where: { email },
+        orderBy: { createdAt: 'desc' }
+      });
+
+      if (!latestOTP) {
+        logAuth.otpFailed(email, 'OTP not found');
+        throw new Error('OTP not found. Please request a new one.');
+      }
+
+      // Check if already used
+      if (latestOTP.used) {
+        logAuth.otpFailed(email, 'OTP already used');
+        throw new Error('OTP has already been verified. Please proceed to registration.');
+      }
+
+      // Check expiry
+      if (new Date() > latestOTP.expiry) {
+        logAuth.otpFailed(email, 'OTP expired');
+        throw new Error('OTP has expired. Please request a new one.');
+      }
+
+      // Check attempts
+      if (latestOTP.attempts >= 5) {
+        logAuth.otpFailed(email, 'Max attempts exceeded');
+        throw new Error('Maximum OTP attempts exceeded. Please request a new one.');
+      }
+
+      // Verify OTP
+      const isValid = await compareOTP(otp, latestOTP.otpHash);
+
+      if (!isValid) {
+        // Increment attempts
+        await prisma.oTP.update({
+          where: { id: latestOTP.id },
+          data: { attempts: latestOTP.attempts + 1 }
+        });
+
+        logAuth.otpFailed(email, 'Invalid OTP');
+        throw new Error(`Invalid OTP. ${5 - latestOTP.attempts - 1} attempts remaining.`);
+      }
+
+      // OTP is valid - mark as used but don't delete yet
+      await prisma.oTP.update({
+        where: { id: latestOTP.id },
+        data: { used: true }
+      });
+
+      logAuth.otpVerified(email);
+
+      return true;
     }
   }
 };

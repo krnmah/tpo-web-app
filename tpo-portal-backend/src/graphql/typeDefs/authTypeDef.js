@@ -44,5 +44,16 @@ extend type Mutation {
     otp: String!
     newPassword: String!
   ): Boolean!
+
+  # Send email verification OTP for signup
+  sendEmailVerificationOTP(
+    email: String!
+  ): Boolean!
+
+  # Verify email OTP during signup
+  verifyEmailOTP(
+    email: String!
+    otp: String!
+  ): Boolean!
 }
 `;

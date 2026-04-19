@@ -85,9 +85,10 @@ function initEmail() {
  * Send OTP email
  * @param {string} email - Recipient email
  * @param {string} otp - 6-digit OTP code
+ * @param {string} type - Type of OTP: 'password_reset' | 'email_verification'
  * @returns {Promise<boolean>} - Success status
  */
-async function sendOTP(email, otp) {
+async function sendOTP(email, otp, type = 'password_reset') {
   // Reinitialize email to pick up new config
   const mailTransporter = initEmail();
 
@@ -96,17 +97,34 @@ async function sendOTP(email, otp) {
     return false;
   }
 
+  // Email content based on type
+  const emailContent = type === 'email_verification'
+    ? {
+        subject: 'Verify Your Email - TNP Portal',
+        title: 'Email Verification',
+        message: 'Thank you for registering with the Training & Placement Portal. Please verify your email address using the OTP below:',
+        validityTime: '10 minutes',
+        warning: '⚠️ If you did not create an account, please ignore this email.'
+      }
+    : {
+        subject: 'Password Reset OTP - TNP Portal',
+        title: 'Password Reset Request',
+        message: 'You have requested to reset your password. Use the following OTP to proceed:',
+        validityTime: '5 minutes',
+        warning: '⚠️ If you did not request this, please ignore this email.'
+      };
+
   const mailOptions = {
     from: process.env.EMAIL_FROM || `"TNP Portal" <${process.env.SMTP_USER}>`,
     to: email,
-    subject: 'Password Reset OTP - TNP Portal',
+    subject: emailContent.subject,
     html: `
       <!DOCTYPE html>
       <html>
       <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Password Reset OTP</title>
+        <title>${emailContent.title}</title>
         <style>
           body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
           .container { max-width: 600px; margin: 0 auto; padding: 20px; }
@@ -121,14 +139,14 @@ async function sendOTP(email, otp) {
         <div class="container">
           <div class="header">
             <h1>🎓 Training & Placement Portal</h1>
-            <p>Password Reset Request</p>
+            <p>${emailContent.title}</p>
           </div>
           <div class="content">
             <p>Hello,</p>
-            <p>You have requested to reset your password. Use the following OTP to proceed:</p>
+            <p>${emailContent.message}</p>
             <div class="otp">${otp}</div>
-            <p><strong>This OTP is valid for 5 minutes only.</strong></p>
-            <p class="warning">⚠️ If you did not request this, please ignore this email.</p>
+            <p><strong>This OTP is valid for ${emailContent.validityTime} only.</strong></p>
+            <p class="warning">${emailContent.warning}</p>
             <div class="footer">
               <p>NIT Srinagar Training & Placement Cell</p>
               <p>This is an automated email. Please do not reply.</p>
@@ -139,17 +157,17 @@ async function sendOTP(email, otp) {
       </html>
     `,
     text: `
-TNP Portal - Password Reset OTP
+TNP Portal - ${emailContent.title}
 
 Hello,
 
-You have requested to reset your password. Use the following OTP to proceed:
+${emailContent.message}
 
 OTP: ${otp}
 
-This OTP is valid for 5 minutes only.
+This OTP is valid for ${emailContent.validityTime} only.
 
-If you did not request this, please ignore this email.
+${emailContent.warning}
 
 ---
 NIT Srinagar Training & Placement Cell
@@ -159,10 +177,10 @@ This is an automated email. Please do not reply.
 
   try {
     const info = await mailTransporter.sendMail(mailOptions);
-    logger.info('OTP email sent successfully', { email, messageId: info.messageId });
+    logger.info('OTP email sent successfully', { email, type, messageId: info.messageId });
     return true;
   } catch (error) {
-    logger.error('Failed to send OTP email', { error: error.message, email });
+    logger.error('Failed to send OTP email', { error: error.message, email, type });
     return false;
   }
 }

@@ -76,6 +76,18 @@ export const VERIFY_OTP_AND_RESET_PASSWORD = gql`
   }
 `;
 
+export const SEND_EMAIL_VERIFICATION_OTP = gql`
+  mutation SendEmailVerificationOTP($email: String!) {
+    sendEmailVerificationOTP(email: $email)
+  }
+`;
+
+export const VERIFY_EMAIL_OTP = gql`
+  mutation VerifyEmailOTP($email: String!, $otp: String!) {
+    verifyEmailOTP(email: $email, otp: $otp)
+  }
+`;
+
 export const GET_ME = gql`
   query GetMe {
     me {
