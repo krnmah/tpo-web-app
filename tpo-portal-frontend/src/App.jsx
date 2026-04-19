@@ -2,6 +2,9 @@ import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-route
 import { useAuth } from "./context/AuthContext";
 import { AuthProvider } from "./context/AuthContext";
 import Home from "./pages/Home";
+import About from "./pages/About";
+import Team from "./pages/Team";
+import Contact from "./pages/Contact";
 import AuthPage from "./pages/AuthPage";
 import StudentLayout from "./pages/student/StudentLayout";
 import Profile from "./pages/student/Profile";
@@ -67,6 +70,9 @@ function AppRoutes() {
     <Routes>
       <Route path="/" element={<Navigate to="/home" replace />} />
       <Route path="/home" element={<Home />} />
+      <Route path="/about" element={<About />} />
+      <Route path="/team" element={<Team />} />
+      <Route path="/contact" element={<Contact />} />
       <Route path="/auth" element={<AuthPage />} />
 
       {/* Student & CRC Routes (CRC can access all student features) */}

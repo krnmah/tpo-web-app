@@ -66,48 +66,48 @@ const AdminDashboard = () => {
   return (
     <div className="flex h-screen bg-gray-100">
       {/* Sidebar */}
-      <aside className="w-64 bg-purple-800 text-white flex flex-col">
-        <div className="p-4 border-b border-purple-700">
-          <h2 className="text-xl font-bold">Admin</h2>
-          <p className="text-sm text-purple-200 mt-1">NIT Srinagar</p>
+      <aside className="w-64 bg-white border-r border-gray-200 text-gray-800 flex flex-col shadow-sm">
+        <div className="p-4 border-b border-gray-200">
+          <h2 className="text-xl font-bold text-gray-900">Admin</h2>
+          <p className="text-sm text-gray-500 mt-1">NIT Srinagar</p>
         </div>
         <nav className="flex-1 p-4">
-          <ul className="space-y-2">
+          <ul className="space-y-1">
             <li>
-              <Link to="/admin/dashboard" className={`block px-3 py-2 rounded ${activeTab === "dashboard" ? "bg-purple-700" : "hover:bg-purple-700"}`}>
+              <Link to="/admin/dashboard" className={`block px-3 py-2 rounded-lg ${activeTab === "dashboard" ? "bg-blue-50 text-blue-700 font-medium" : "hover:bg-gray-100 text-gray-700"}`}>
                 📊 Dashboard
               </Link>
             </li>
             <li>
-              <Link to="/admin/users" className={`block px-3 py-2 rounded ${activeTab === "users" ? "bg-purple-700" : "hover:bg-purple-700"}`}>
+              <Link to="/admin/users" className={`block px-3 py-2 rounded-lg ${activeTab === "users" ? "bg-blue-50 text-blue-700 font-medium" : "hover:bg-gray-100 text-gray-700"}`}>
                 👥 Users
               </Link>
             </li>
             <li>
-              <Link to="/admin/companies" className={`block px-3 py-2 rounded ${activeTab === "companies" ? "bg-purple-700" : "hover:bg-purple-700"}`}>
+              <Link to="/admin/companies" className={`block px-3 py-2 rounded-lg ${activeTab === "companies" ? "bg-blue-50 text-blue-700 font-medium" : "hover:bg-gray-100 text-gray-700"}`}>
                 🏢 Companies
               </Link>
             </li>
             <li>
-              <Link to="/admin/crc" className={`block px-3 py-2 rounded ${activeTab === "crc" ? "bg-purple-700" : "hover:bg-purple-700"}`}>
+              <Link to="/admin/crc" className={`block px-3 py-2 rounded-lg ${activeTab === "crc" ? "bg-blue-50 text-blue-700 font-medium" : "hover:bg-gray-100 text-gray-700"}`}>
                 🎯 CRC Management
               </Link>
             </li>
             <li>
-              <Link to="/admin/stats" className={`block px-3 py-2 rounded ${activeTab === "stats" ? "bg-purple-700" : "hover:bg-purple-700"}`}>
+              <Link to="/admin/stats" className={`block px-3 py-2 rounded-lg ${activeTab === "stats" ? "bg-blue-50 text-blue-700 font-medium" : "hover:bg-gray-100 text-gray-700"}`}>
                 📈 Placement Stats
               </Link>
             </li>
           </ul>
         </nav>
-        <div className="p-3 border-t border-purple-700 bg-purple-900">
-          <p className="text-xs text-purple-300">
+        <div className="p-3 border-t border-gray-200 bg-gray-50">
+          <p className="text-xs text-gray-600">
             Logged in as <span className="font-semibold">{user?.name}</span>
           </p>
-          <p className="text-xs text-purple-400">Admin • {user?.email}</p>
+          <p className="text-xs text-gray-500">Admin • {user?.email}</p>
           <button
             onClick={handleLogout}
-            className="w-full text-left px-3 py-2 rounded-lg hover:bg-purple-700 text-sm text-purple-200 mt-2"
+            className="w-full text-left px-3 py-2 rounded-lg hover:bg-gray-200 text-sm text-gray-600 mt-2"
           >
             Logout
           </button>

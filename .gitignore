@@ -75,3 +75,9 @@ dist-ssr/
 
 # TypeScript
 *.tsbuildinfo
+.aider*
+.claude
+graphify-out
+skills-lock.json
+CLAUDE.md
+NIT_Srinagar_Placement_Brochure_AY_25_26__1753978379.pdf
