@@ -28,7 +28,7 @@ const ParticleBackground = () => {
       particleCount: 200,
       connectionDistance: 100,
       mouseRepelDistance: 180,
-      particleSpeed: 0.35,
+      particleSpeed: 1.2,
       repelForce: 4,
       particleColor: "rgba(0, 0, 0, 0.8)",  // pure black
       lineColor: "0, 0, 0",  // pure black
@@ -100,19 +100,20 @@ const ParticleBackground = () => {
         }
 
         // Damping to return to normal speed
-        const maxSpeed = config.particleSpeed * 4;
+        const maxSpeed = config.particleSpeed * 2;
         if (this.vx > maxSpeed) this.vx = maxSpeed;
         if (this.vx < -maxSpeed) this.vx = -maxSpeed;
         if (this.vy > maxSpeed) this.vy = maxSpeed;
         if (this.vy < -maxSpeed) this.vy = -maxSpeed;
 
-        // Gradually return to base speed
-        this.vx *= 0.98;
-        this.vy *= 0.98;
+        // Minimal damping - maintain speed
+        this.vx *= 0.995;
+        this.vy *= 0.995;
 
-        // Ensure minimum floating movement
-        if (Math.abs(this.vx) < 0.05) this.vx += (Math.random() - 0.5) * 0.01;
-        if (Math.abs(this.vy) < 0.05) this.vy += (Math.random() - 0.5) * 0.01;
+        // Ensure minimum movement
+        const minSpeed = config.particleSpeed * 0.3;
+        if (Math.abs(this.vx) < minSpeed) this.vx = this.vx >= 0 ? minSpeed : -minSpeed;
+        if (Math.abs(this.vy) < minSpeed) this.vy = this.vy >= 0 ? minSpeed : -minSpeed;
 
         // Wrap around edges smoothly
         if (this.x < -50) this.x = width + 50;
