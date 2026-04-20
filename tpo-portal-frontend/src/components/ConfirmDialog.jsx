@@ -10,9 +10,9 @@ export const useConfirm = () => {
 export const ConfirmDialogProvider = ({ children }) => {
   const [dialog, setDialog] = useState(null);
 
-  const confirm = useCallback((message, title = "Confirm Action") => {
+  const confirm = useCallback((message, title = "Confirm Action", variant = "default") => {
     return new Promise((resolve) => {
-      setDialog({ title, message, resolve });
+      setDialog({ title, message, resolve, variant });
     });
   }, []);
 
@@ -55,29 +55,53 @@ export const ConfirmDialogProvider = ({ children }) => {
             <div className="p-6">
               {/* Header */}
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold text-zinc-900">{dialog.title}</h3>
+                <h3 className={`text-lg font-semibold ${
+                  dialog.variant === "admin" ? "text-blue-900" :
+                  dialog.variant === "crc" ? "text-indigo-900" :
+                  "text-zinc-900"
+                }`}>{dialog.title}</h3>
                 <button
                   onClick={handleCancel}
-                  className="text-zinc-400 hover:text-zinc-600 transition-colors p-1 rounded-lg hover:bg-zinc-100"
+                  className={`transition-colors p-1 rounded-lg hover:bg-zinc-100 ${
+                    dialog.variant === "admin" ? "text-blue-400 hover:text-blue-600" :
+                    dialog.variant === "crc" ? "text-indigo-400 hover:text-indigo-600" :
+                    "text-zinc-400 hover:text-zinc-600"
+                  }`}
                 >
                   <X className="w-5 h-5" />
                 </button>
               </div>
 
               {/* Message */}
-              <p className="text-sm text-zinc-600">{dialog.message}</p>
+              <p className={`text-sm ${
+                dialog.variant === "admin" ? "text-blue-700" :
+                dialog.variant === "crc" ? "text-indigo-700" :
+                "text-zinc-600"
+              }`}>{dialog.message}</p>
 
               {/* Actions */}
               <div className="flex gap-3 mt-6">
                 <button
                   onClick={handleCancel}
-                  className="flex-1 px-4 py-2.5 text-sm font-medium text-zinc-700 bg-zinc-100 rounded-lg hover:bg-zinc-200 transition-colors"
+                  className={`flex-1 px-4 py-2.5 text-sm font-medium rounded-lg transition-colors ${
+                    dialog.variant === "admin"
+                      ? "text-blue-700 bg-blue-50 hover:bg-blue-100"
+                      : dialog.variant === "crc"
+                      ? "text-indigo-700 bg-indigo-50 hover:bg-indigo-100"
+                      : "text-zinc-700 bg-zinc-100 hover:bg-zinc-200"
+                  }`}
                 >
                   Cancel
                 </button>
                 <button
                   onClick={handleConfirm}
-                  className="flex-1 px-4 py-2.5 text-sm font-medium text-white bg-zinc-900 rounded-lg hover:bg-zinc-800 transition-colors"
+                  className={`flex-1 px-4 py-2.5 text-sm font-medium text-white rounded-lg transition-colors ${
+                    dialog.variant === "admin"
+                      ? "bg-blue-600 hover:bg-blue-700"
+                      : dialog.variant === "crc"
+                      ? "bg-indigo-600 hover:bg-indigo-700"
+                      : "bg-zinc-900 hover:bg-zinc-800"
+                  }`}
                 >
                   Confirm
                 </button>

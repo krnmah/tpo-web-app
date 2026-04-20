@@ -34,7 +34,8 @@ const CRCDashboard = () => {
   const handleLogout = async () => {
     const confirmed = await confirm(
       "Are you sure you want to log out?",
-      "Confirm Logout"
+      "Confirm Logout",
+      "crc"
     );
     if (confirmed) {
       logout();
@@ -479,7 +480,7 @@ const CRCDashboard = () => {
                         {job.status === "OPEN" && (
                           <button
                             onClick={async () => {
-                              const confirmed = await confirm("Close this job?", "Confirm Action");
+                              const confirmed = await confirm("Close this job?", "Confirm Action", "crc");
                               if (confirmed) {
                                 await closeJob({ variables: { id: job.id } });
                                 refetchJobs();
