@@ -187,7 +187,7 @@ const Profile = () => {
           {!isEditing && (
             <button
               onClick={() => setIsEditing(true)}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+              className="px-4 py-2 bg-zinc-900 text-white rounded-lg hover:bg-zinc-800"
             >
               Edit Profile
             </button>
@@ -222,7 +222,7 @@ const Profile = () => {
                 {user.resumeUrl ? (
                   <a
                     href={user.resumeUrl}
-                    className="text-blue-600 hover:underline inline-flex items-center gap-1"
+                    className="text-zinc-900 hover:underline inline-flex items-center gap-1"
                     target="_blank"
                     rel="noopener noreferrer"
                   >
@@ -234,7 +234,7 @@ const Profile = () => {
                 {user.reportCardUrl ? (
                   <a
                     href={user.reportCardUrl}
-                    className="text-blue-600 hover:underline inline-flex items-center gap-1"
+                    className="text-zinc-900 hover:underline inline-flex items-center gap-1"
                     target="_blank"
                     rel="noopener noreferrer"
                   >
@@ -273,7 +273,7 @@ const Profile = () => {
                   max="10"
                   value={editForm.cgpa}
                   onChange={(e) => setEditForm({ ...editForm, cgpa: e.target.value })}
-                  className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-zinc-900"
                   required
                 />
               </div>
@@ -284,7 +284,7 @@ const Profile = () => {
                   value={editForm.resumeUrl}
                   onChange={(e) => setEditForm({ ...editForm, resumeUrl: e.target.value })}
                   placeholder="https://drive.google.com/..."
-                  className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-zinc-900"
                   required
                 />
               </div>
@@ -295,7 +295,7 @@ const Profile = () => {
                   value={editForm.reportCardUrl}
                   onChange={(e) => setEditForm({ ...editForm, reportCardUrl: e.target.value })}
                   placeholder="https://drive.google.com/..."
-                  className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-zinc-900"
                   required
                 />
               </div>
@@ -303,7 +303,7 @@ const Profile = () => {
             <div className="flex gap-3">
               <button
                 type="submit"
-                className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                className="px-6 py-2 bg-zinc-900 text-white rounded-lg hover:bg-zinc-800"
               >
                 Save Changes
               </button>
@@ -347,7 +347,7 @@ const Profile = () => {
                   maxLength={20}
                   value={passwordForm.newPassword}
                   onChange={(e) => setPasswordForm({ ...passwordForm, newPassword: e.target.value })}
-                  className="w-full px-4 py-2 pr-10 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-4 py-2 pr-10 border rounded-lg focus:outline-none focus:ring-2 focus:ring-zinc-900"
                   required
                 />
                 <button
@@ -367,7 +367,7 @@ const Profile = () => {
                   maxLength={20}
                   value={passwordForm.confirmPassword}
                   onChange={(e) => setPasswordForm({ ...passwordForm, confirmPassword: e.target.value })}
-                  className="w-full px-4 py-2 pr-10 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-4 py-2 pr-10 border rounded-lg focus:outline-none focus:ring-2 focus:ring-zinc-900"
                   required
                 />
                 <button
@@ -382,7 +382,7 @@ const Profile = () => {
             <div className="flex gap-3">
               <button
                 type="submit"
-                className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                className="px-6 py-2 bg-zinc-900 text-white rounded-lg hover:bg-zinc-800"
               >
                 Update Password
               </button>

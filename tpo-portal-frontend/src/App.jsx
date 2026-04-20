@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { useAuth } from "./context/AuthContext";
 import { AuthProvider } from "./context/AuthContext";
+import { ConfirmDialogProvider } from "./components/ConfirmDialog";
 import Home from "./pages/Home";
 import About from "./pages/About";
 import Team from "./pages/Team";
@@ -122,10 +123,12 @@ function AppRoutes() {
 function App() {
   return (
     <AuthProvider>
-      <BrowserRouter>
-        <RouteLogger />
-        <AppRoutes />
-      </BrowserRouter>
+      <ConfirmDialogProvider>
+        <BrowserRouter>
+          <RouteLogger />
+          <AppRoutes />
+        </BrowserRouter>
+      </ConfirmDialogProvider>
     </AuthProvider>
   );
 }

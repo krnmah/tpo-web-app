@@ -52,9 +52,11 @@ export const LOGIN = gql`
         role
         name
         enrollmentNumber
+        branch
         cgpa
         skills
         resumeUrl
+        reportCardUrl
       }
     }
   }
@@ -402,10 +404,10 @@ export const GET_MY_APPLICATIONS = gql`
       job {
         id
         title
-        company {
-          id
-          name
-        }
+      }
+      company {
+        id
+        name
       }
     }
   }

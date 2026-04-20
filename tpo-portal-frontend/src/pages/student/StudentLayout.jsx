@@ -3,10 +3,9 @@ import Sidebar from "../../components/Sidebar";
 
 const StudentLayout = () => {
   return (
-    <div className="flex h-screen bg-gray-100">
+    <div className="flex min-h-screen bg-zinc-50">
       <Sidebar />
-
-      <main className="flex-1 p-6 overflow-y-auto">
+      <main className="flex-1 p-6 lg:p-8 overflow-y-auto">
         <Outlet />
       </main>
     </div>

@@ -351,6 +351,7 @@ const AuthPage = () => {
 
       if (result.errors) {
         setError(result.errors[0].message);
+        setLoading(false);
       } else {
         // Password reset successful - show success and go back to login
         setError("");
@@ -376,7 +377,7 @@ const AuthPage = () => {
       return;
     }
 
-    if (loginPassword.length < 9) {
+    if (loginPassword.length < 8) {
       setError("Password must be at least 8 characters.");
       setLoading(false);
       return;
@@ -557,7 +558,7 @@ const AuthPage = () => {
                       <input
                         id="login-email"
                         type="text"
-                        placeholder="siddharth_2022bcse024"
+                        placeholder="Enter your email"
                         value={loginEmail}
                         onChange={(e) => setLoginEmail(e.target.value)}
                         className="flex-1 px-4 py-3 border border-slate-200 rounded-l-lg focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-slate-900 transition-all duration-200 text-sm placeholder:text-slate-400"
@@ -567,7 +568,6 @@ const AuthPage = () => {
                         {DOMAIN}
                       </span>
                     </div>
-                    <p className="mt-1.5 text-xs text-slate-500">Enter your college email prefix</p>
                   </div>
 
                   <div>
@@ -712,7 +712,7 @@ const AuthPage = () => {
                             type={showNewPassword ? "text" : "password"}
                             value={resetNewPassword}
                             onChange={(e) => setResetNewPassword(e.target.value)}
-                            placeholder="Min 8 chars, 1 uppercase, 1 number"
+                            placeholder="Min 8 chars, 1 uppercase, 1 number, 1 special"
                             className="w-full px-4 py-2.5 pr-10 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-slate-900 transition-colors duration-200 text-sm placeholder:text-slate-400"
                             required
                           />
@@ -786,139 +786,6 @@ const AuthPage = () => {
                   )}
                 </div>
               )}
-                    <h3 className="text-lg font-semibold text-slate-900">Reset Password</h3>
-                    <button
-                      type="button"
-                      onClick={handleCancelPasswordReset}
-                      className="text-sm text-slate-500 hover:text-slate-700 transition-colors duration-200"
-                    >
-                      ✕ Cancel
-                    </button>
-                  </div>
-
-                  {!resetOtpSent ? (
-                    <div className="space-y-4">
-                      <p className="text-sm text-slate-600">
-                        Enter your college email to receive a password reset OTP.
-                      </p>
-                      <div>
-                        <label htmlFor="reset-email" className="block text-sm font-medium text-slate-900 mb-1.5">
-                          College Email
-                        </label>
-                        <div className="flex">
-                          <input
-                            id="reset-email"
-                            type="text"
-                            placeholder="siddharth_2022bcse024"
-                            value={resetEmailPrefix}
-                            onChange={(e) => setResetEmailPrefix(e.target.value)}
-                            className="flex-1 px-4 py-2.5 border border-slate-300 rounded-l-lg focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-slate-900 transition-colors duration-200 text-sm placeholder:text-slate-400"
-                            required
-                          />
-                          <span className="px-3 py-2.5 bg-slate-100 border border-l-0 border-slate-300 rounded-r-lg text-slate-600 text-sm font-medium">
-                            {DOMAIN}
-                          </span>
-                        </div>
-                      </div>
-                      <button
-                        onClick={handleSendResetOTP}
-                        disabled={loading}
-                        className="w-full px-6 py-3 rounded-lg text-sm font-semibold text-white transition-all duration-200 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-slate-900 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed bg-slate-900 hover:bg-slate-800"
-                      >
-                        {loading ? (
-                          <span className="flex items-center justify-center gap-2">
-                            <Spinner />
-                            Sending OTP...
-                          </span>
-                        ) : (
-                          "Send OTP"
-                        )}
-                      </button>
-                    </div>
-                  ) : (
-                    <div className="space-y-4">
-                      <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-lg">
-                        <p className="text-sm text-emerald-800">
-                          OTP sent to <strong>{getFullEmail(resetEmailPrefix)}</strong>
-                        </p>
-                      </div>
-
-                      <div>
-                        <label htmlFor="reset-otp" className="block text-sm font-medium text-slate-900 mb-1.5">
-                          Enter OTP
-                        </label>
-                        <input
-                          id="reset-otp"
-                          type="text"
-                          placeholder="123456"
-                          value={resetOtp}
-                          onChange={(e) => setResetOtp(e.target.value.replace(/\D/g, "").slice(0, 6))}
-                          className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-slate-900 transition-colors duration-200 text-center text-xl tracking-widest text-sm placeholder:text-slate-400"
-                          maxLength={6}
-                          required
-                        />
-                      </div>
-
-                      <div>
-                        <label htmlFor="reset-new-password" className="block text-sm font-medium text-slate-900 mb-1.5">
-                          New Password
-                        </label>
-                        <div className="relative">
-                          <input
-                            id="reset-new-password"
-                            type={showNewPassword ? "text" : "password"}
-                            value={resetNewPassword}
-                            onChange={(e) => setResetNewPassword(e.target.value)}
-                            placeholder="Min 8 chars, 1 uppercase, 1 number"
-                            className="w-full px-4 py-2.5 pr-10 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-slate-900 transition-colors duration-200 text-sm placeholder:text-slate-400"
-                            required
-                          />
-                          <button
-                            type="button"
-                            onClick={() => setShowNewPassword(!showNewPassword)}
-                            className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors duration-200 p-1 rounded hover:bg-slate-100"
-                            aria-label={showNewPassword ? "Hide password" : "Show password"}
-                          >
-                            {showNewPassword ? <EyeOffIcon /> : <EyeIcon />}
-                          </button>
-                        </div>
-                      </div>
-
-                      <button
-                        onClick={handleVerifyResetOTP}
-                        disabled={loading}
-                        className="w-full px-6 py-3 rounded-lg text-sm font-semibold text-white transition-all duration-200 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-slate-900 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed bg-slate-900 hover:bg-slate-800"
-                      >
-                        {loading ? (
-                          <span className="flex items-center justify-center gap-2">
-                            <Spinner />
-                            Resetting...
-                          </span>
-                        ) : (
-                          "Reset Password"
-                        )}
-                      </button>
-
-                      <div className="flex items-center justify-between text-sm">
-                        <span className="text-slate-500">Didn't receive OTP?</span>
-                        {resetResendCountdown > 0 ? (
-                          <span className="text-slate-500">Resend in {resetResendCountdown}s</span>
-                        ) : (
-                          <button
-                            type="button"
-                            onClick={handleSendResetOTP}
-                            disabled={loading}
-                            className="text-slate-900 hover:underline font-medium"
-                          >
-                            Resend OTP
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
-
               {/* Signup Form */}
               {activeTab === "signup" && (
                 <div className="space-y-4 max-h-[65vh] overflow-y-auto pr-4 pb-2 scroll-smooth">
@@ -1140,7 +1007,7 @@ const AuthPage = () => {
                           <input
                             id="signup-password"
                             type={showPassword ? "text" : "password"}
-                            placeholder="Min 8 chars, 1 uppercase, 1 number"
+                            placeholder="Min 8 chars, 1 uppercase, 1 number, 1 special"
                             value={signupData.password}
                             onChange={(e) => setSignupData({ ...signupData, password: e.target.value })}
                             className="w-full px-4 py-2.5 pr-10 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-slate-900 transition-all duration-200 text-sm placeholder:text-slate-400"
@@ -1215,6 +1082,7 @@ const AuthPage = () => {
                       <button
                         type="submit"
                         disabled={loading}
+                        // eslint-disable-next-line no-unused-vars
                         onClick={(e) => {
                           console.log("Button clicked");
                         }}
@@ -1235,14 +1103,14 @@ const AuthPage = () => {
               )}
             </div>
           </div>
-
-          {/* Footer */}
-          <div className="mt-6 text-center">
-            <p className="text-xs text-slate-500">
-              © {new Date().getFullYear()} Training & Placement Cell, NIT Srinagar
-            </p>
-          </div>
         </div>
+      </div>
+
+      {/* Footer - Always at bottom */}
+      <div className="py-6 text-center relative z-10">
+        <p className="text-xs text-slate-500">
+          © {new Date().getFullYear()} Training & Placement Cell, NIT Srinagar
+        </p>
       </div>
     </div>
   );
