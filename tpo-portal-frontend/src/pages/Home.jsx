@@ -15,7 +15,7 @@ const Home = () => {
               href="https://nitsri.ac.in/"
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center gap-3 transition-opacity duration-200 hover:opacity-80 focus:outline-none rounded-lg focus:ring-2 focus:ring-sky-500 focus:ring-offset-2"
+              className="flex items-center gap-3 transition-opacity duration-200 hover:opacity-80 focus:outline-none"
             >
               <img
                 src={nitsLogo}
