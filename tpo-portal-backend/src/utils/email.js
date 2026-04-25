@@ -148,7 +148,7 @@ async function sendOTP(email, otp, type = 'password_reset') {
             <p><strong>This OTP is valid for ${emailContent.validityTime} only.</strong></p>
             <p class="warning">${emailContent.warning}</p>
             <div class="footer">
-              <p>NIT Srinagar Training & Placement Cell</p>
+              <p>NIT Srinagar Training & Placement Department</p>
               <p>This is an automated email. Please do not reply.</p>
             </div>
           </div>
@@ -170,7 +170,7 @@ This OTP is valid for ${emailContent.validityTime} only.
 ${emailContent.warning}
 
 ---
-NIT Srinagar Training & Placement Cell
+NIT Srinagar Training & Placement Department
 This is an automated email. Please do not reply.
     `
   };
@@ -236,7 +236,7 @@ async function sendWelcomeEmail(email, name) {
             </ul>
             <p>Log in to your account to get started!</p>
             <div class="footer">
-              <p>NIT Srinagar Training & Placement Cell</p>
+              <p>NIT Srinagar Training & Placement Department</p>
               <p>This is an automated email. Please do not reply.</p>
             </div>
           </div>
@@ -256,9 +256,104 @@ async function sendWelcomeEmail(email, name) {
   }
 }
 
+/**
+ * Send job notification email to eligible students
+ * @param {Object} params - Email parameters
+ * @param {string[]} params.emails - Array of student emails
+ * @param {string} params.companyName - Name of the company
+ * @param {string} params.jobTitle - Title of the job position
+ * @param {number} params.minCgpa - Minimum CGPA required
+ * @returns {Promise<Object>} - Object with success count and failed emails
+ */
+async function sendJobNotificationEmail({ emails, companyName, jobTitle, minCgpa }) {
+  const mailTransporter = initEmail();
+
+  if (!mailTransporter) {
+    logger.info(`[DEV MODE] Job notification would be sent to ${emails.length} students for ${companyName} - ${jobTitle}`);
+    return { success: emails.length, failed: [] };
+  }
+
+  const mailOptions = {
+    from: process.env.EMAIL_FROM || `"TNP Portal" <${process.env.SMTP_USER}>`,
+    bcc: emails.join(', '), // Use BCC to send to multiple students at once
+    subject: `🎯 New Job Opportunity: ${jobTitle} at ${companyName}`,
+    html: `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>New Job Opportunity</title>
+        <style>
+          body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+          .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+          .header { background: linear-gradient(135deg, #0B5ED7 0%, #0848a8 100%); color: white; padding: 25px 20px; text-align: center; border-radius: 12px 12px 0 0; }
+          .content { background: #f9f9f9; padding: 30px; border: 1px solid #ddd; border-radius: 0 0 12px 12px; }
+          .job-card { background: white; border-left: 4px solid #0B5ED7; padding: 20px; margin: 20px 0; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+          .job-title { font-size: 20px; font-weight: bold; color: #0B5ED7; margin-bottom: 8px; }
+          .company-name { font-size: 16px; color: #555; margin-bottom: 15px; }
+          .requirement { background: #fff3cd; padding: 12px; border-radius: 6px; margin: 15px 0; }
+          .footer { text-align: center; margin-top: 25px; font-size: 12px; color: #777; }
+          .highlight { color: #0B5ED7; font-weight: bold; }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
+            <h1>🎓 New Job Opportunity!</h1>
+            <p>You're eligible to apply</p>
+          </div>
+          <div class="content">
+            <p>Dear Student,</p>
+            <p>A new job opening has been posted that matches your profile!</p>
+
+            <div class="job-card">
+              <div class="job-title">${jobTitle}</div>
+              <div class="company-name">🏢 <strong>${companyName}</strong></div>
+              <div class="requirement">
+                <strong>📊 Minimum CGPA Required:</strong> <span class="highlight">${minCgpa}</span>
+              </div>
+            </div>
+
+            <p style="font-size: 14px; color: #666; margin-top: 20px;">
+              💡 <strong>Tip:</strong> Log in to the Training & Placement Portal to view more details and apply.
+            </p>
+
+            <div class="footer">
+              <p>NIT Srinagar Training & Placement Department</p>
+              <p>This is an automated email. Please do not reply.</p>
+            </div>
+          </div>
+        </div>
+      </body>
+      </html>
+    `
+  };
+
+  try {
+    const info = await mailTransporter.sendMail(mailOptions);
+    logger.info('Job notification email sent successfully', {
+      companyName,
+      jobTitle,
+      studentCount: emails.length,
+      messageId: info.messageId
+    });
+    return { success: emails.length, failed: [] };
+  } catch (error) {
+    logger.error('Failed to send job notification email', {
+      error: error.message,
+      companyName,
+      jobTitle,
+      studentCount: emails.length
+    });
+    return { success: 0, failed: emails };
+  }
+}
+
 // Don't initialize on module load - initialize on demand
 module.exports = {
   sendOTP,
   sendWelcomeEmail,
+  sendJobNotificationEmail,
   initEmail
 };

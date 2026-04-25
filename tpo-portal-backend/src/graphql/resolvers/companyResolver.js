@@ -17,7 +17,18 @@ module.exports = {
         }
       });
       return crc;
-    }
+    },
+    createdAt: (company) => company.createdAt?.toISOString() || null,
+    updatedAt: (company) => company.updatedAt?.toISOString() || null,
+    hasActiveJobs: async (company, _, __) => {
+      const activeJobs = await prisma.job.count({
+        where: {
+          companyId: company.id,
+          status: 'OPEN'
+        }
+      });
+      return activeJobs > 0;
+    },
   },
 
   Query: {
@@ -97,7 +108,7 @@ module.exports = {
         const company = await prisma.company.create({
           data: {
             name: validated.name,
-            description: validated.description,
+            description: validated.description || '',
             ...(validated.assignedCRC && { assignedCRC: validated.assignedCRC })
           }
         });

@@ -61,6 +61,58 @@ module.exports = {
         totalApplications,
         placementPercentage
       };
+    },
+
+    placedStudents: async (_, { branch }, { user }) => {
+      authorize(user, ['ADMIN']);
+
+      // Get all applications with SELECTED status
+      const whereClause = { status: 'SELECTED' };
+
+      const applications = await prisma.application.findMany({
+        where: whereClause,
+        include: {
+          student: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              enrollmentNumber: true,
+              branch: true,
+              cgpa: true,
+            }
+          },
+          job: {
+            include: {
+              company: {
+                select: {
+                  id: true,
+                  name: true,
+                }
+              }
+            }
+          }
+        },
+        orderBy: { updatedAt: 'desc' }
+      });
+
+      // Filter by branch if provided
+      let filtered = applications;
+      if (branch && branch !== 'All') {
+        filtered = applications.filter(app => app.student.branch === branch);
+      }
+
+      // Transform to PlacedStudent format
+      return filtered.map(app => ({
+        id: app.student.id,
+        name: app.student.name,
+        email: app.student.email,
+        enrollmentNumber: app.student.enrollmentNumber,
+        branch: app.student.branch || 'N/A',
+        cgpa: app.student.cgpa,
+        companyName: app.job.company.name,
+        placedAt: app.updatedAt?.toISOString() || app.createdAt?.toISOString() || new Date().toISOString(),
+      }));
     }
   }
 };

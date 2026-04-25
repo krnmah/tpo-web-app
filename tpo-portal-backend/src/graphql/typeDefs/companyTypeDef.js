@@ -6,11 +6,12 @@ type Company {
   assignedCRC: UserResponse
   createdAt: String!
   updatedAt: String!
+  hasActiveJobs: Boolean!
 }
 
 input CreateCompanyInput {
   name: String!
-  description: String!
+  description: String
   assignedCRC: Int
 }
 

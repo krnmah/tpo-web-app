@@ -1,7 +1,8 @@
 const prisma = require('../../config/prismaClient');
 const { authorize, crcCompanyCheck } = require('../../middleware/auth');
 const { validateCreateJob } = require('../../utils/validation');
-const { logApplication, logAudit } = require('../../utils/logger');
+const { logApplication, logAudit, logger } = require('../../utils/logger');
+const { sendJobNotificationEmail } = require('../../utils/email');
 
 module.exports = {
   Job: {
@@ -137,6 +138,42 @@ module.exports = {
 
         logAudit.dataAccess(user.id, `job_create_${job.id}`);
 
+        // Send email notification to eligible students (only for OPEN jobs)
+        if (job.status === 'OPEN') {
+          // Find all STUDENTs and CRCs (who are also students) whose CGPA meets the minimum requirement
+          const eligibleStudents = await prisma.user.findMany({
+            where: {
+              role: { in: ['STUDENT', 'CRC'] },
+              cgpa: {
+                gte: job.minCgpa,
+                not: null
+              }
+            },
+            select: {
+              email: true,
+              cgpa: true
+            }
+          });
+
+          logger.info('Job notification - Eligible students', {
+            jobTitle: job.title,
+            minCgpa: job.minCgpa,
+            eligibleCount: eligibleStudents.length,
+            emails: eligibleStudents.map(s => s.email)
+          });
+
+          // Send emails to eligible students (using BCC for bulk sending)
+          if (eligibleStudents.length > 0) {
+            const studentEmails = eligibleStudents.map(s => s.email);
+            await sendJobNotificationEmail({
+              emails: studentEmails,
+              companyName: job.company.name,
+              jobTitle: job.title,
+              minCgpa: job.minCgpa
+            });
+          }
+        }
+
         return job;
       } catch (error) {
         if (error.name === 'ZodError') {
@@ -171,6 +208,41 @@ module.exports = {
       });
 
       logAudit.dataAccess(user.id, `job_update_${id}`);
+
+      // If minCgpa was lowered, send emails to newly eligible students only
+      if (input.minCgpa !== undefined && input.minCgpa < existing.minCgpa && updated.status === 'OPEN') {
+        const newlyEligibleStudents = await prisma.user.findMany({
+          where: {
+            role: { in: ['STUDENT', 'CRC'] },
+            cgpa: {
+              gte: updated.minCgpa,   // New lower bound (inclusive)
+              lt: existing.minCgpa     // Old upper bound (exclusive) - only students in this range
+            }
+          },
+          select: {
+            email: true,
+            cgpa: true
+          }
+        });
+
+        logger.info('Job CGPA lowered - Sending notifications to newly eligible students', {
+          jobId: updated.id,
+          jobTitle: updated.title,
+          oldCgpa: existing.minCgpa,
+          newCgpa: updated.minCgpa,
+          newlyEligibleCount: newlyEligibleStudents.length
+        });
+
+        if (newlyEligibleStudents.length > 0) {
+          const studentEmails = newlyEligibleStudents.map(s => s.email);
+          await sendJobNotificationEmail({
+            emails: studentEmails,
+            companyName: updated.company.name,
+            jobTitle: updated.title,
+            minCgpa: updated.minCgpa
+          });
+        }
+      }
 
       return updated;
     },

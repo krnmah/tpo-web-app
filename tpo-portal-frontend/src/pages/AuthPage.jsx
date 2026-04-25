@@ -492,7 +492,7 @@ const AuthPage = () => {
               />
             </Link>
             <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 mb-1">
-              Training & Placement Cell
+              Training & Placement Department
             </h1>
             <p className="text-slate-600 text-sm">National Institute of Technology, Srinagar</p>
           </div>
@@ -1109,7 +1109,7 @@ const AuthPage = () => {
       {/* Footer - Always at bottom */}
       <div className="py-6 text-center relative z-10">
         <p className="text-xs text-slate-500">
-          © {new Date().getFullYear()} Training & Placement Cell, NIT Srinagar
+          © {new Date().getFullYear()} Training & Placement Department, NIT Srinagar
         </p>
       </div>
     </div>

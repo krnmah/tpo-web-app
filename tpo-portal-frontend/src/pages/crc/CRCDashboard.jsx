@@ -3,8 +3,8 @@ import { useQuery, useMutation } from "@apollo/client";
 import { useAuth } from "../../context/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { useConfirm } from "../../components/ConfirmDialog";
-import { GET_COMPANIES, GET_MY_ASSIGNED_COMPANIES, CREATE_MY_COMPANY, UPDATE_COMPANY } from "../../graphql/queries";
-import { GET_JOBS, CREATE_JOB, CLOSE_JOB } from "../../graphql/queries";
+import { GET_MY_ASSIGNED_COMPANIES } from "../../graphql/queries";
+import { GET_JOBS, CREATE_JOB, CLOSE_JOB, UPDATE_JOB, DELETE_JOB } from "../../graphql/queries";
 import { GET_APPLICATIONS_BY_COMPANY, UPDATE_APPLICATION_STATUS } from "../../graphql/queries";
 import {
   LayoutDashboard,
@@ -19,6 +19,8 @@ import {
   Check,
   X,
   ChevronDown,
+  Pencil,
+  Trash2,
 } from "../../components/Icons";
 
 const CRCDashboard = () => {
@@ -27,8 +29,9 @@ const CRCDashboard = () => {
   const confirm = useConfirm();
   const [activeTab, setActiveTab] = useState("overview");
   const [selectedCompany, setSelectedCompany] = useState(null);
-  const [showCompanyForm, setShowCompanyForm] = useState(false);
   const [showJobForm, setShowJobForm] = useState(false);
+  const [editingJob, setEditingJob] = useState(null);
+  const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
   const isStudentMode = activeRole === 'STUDENT';
 
   const handleLogout = async () => {
@@ -48,7 +51,6 @@ const CRCDashboard = () => {
     fetchPolicy: "network-only"
   });
   const { data: allJobsData, refetch: refetchJobs, error: jobsError } = useQuery(GET_JOBS, {
-    variables: { status: "OPEN" },
     fetchPolicy: "network-only"
   });
 
@@ -56,13 +58,13 @@ const CRCDashboard = () => {
   const jobs = allJobsData?.jobs || [];
 
   // Mutations
-  const [createMyCompany] = useMutation(CREATE_MY_COMPANY);
   const [createJob] = useMutation(CREATE_JOB);
   const [closeJob] = useMutation(CLOSE_JOB);
+  const [updateJob] = useMutation(UPDATE_JOB);
+  const [deleteJob] = useMutation(DELETE_JOB);
   const [updateApplicationStatus] = useMutation(UPDATE_APPLICATION_STATUS);
 
   // Forms
-  const [newCompany, setNewCompany] = useState({ name: "", description: "" });
   const [newJob, setNewJob] = useState({
     title: "",
     companyId: "",
@@ -71,50 +73,34 @@ const CRCDashboard = () => {
     requiredSkills: []
   });
 
-  const handleCreateCompany = async (e) => {
-    e.preventDefault();
-    if (!newCompany.name.trim()) {
-      alert('Company name is required.');
-      return;
-    }
-    if (newCompany.description.length < 10) {
-      alert('Description must be at least 10 characters.');
-      return;
-    }
-    try {
-      const result = await createMyCompany({
-        variables: { name: newCompany.name, description: newCompany.description }
-      });
-      if (result.errors?.length > 0) {
-        alert(result.errors[0].message);
-        return;
-      }
-      setNewCompany({ name: "", description: "" });
-      setShowCompanyForm(false);
-      refetchCompanies();
-      alert('Company added successfully!');
-    } catch (err) {
-      alert(err.message || 'Failed to add company');
-    }
-  };
-
   const handleCreateJob = async (e) => {
     e.preventDefault();
     if (!newJob.title || newJob.title.length < 3) {
-      alert("Job title must be at least 3 characters.");
+      setToast({ show: true, message: 'Job title must be at least 3 characters', type: 'error' });
+      setTimeout(() => setToast({ ...toast, show: false }), 3000);
       return;
     }
     if (!newJob.companyId) {
-      alert("Please select a company.");
+      setToast({ show: true, message: 'Please select a company', type: 'error' });
+      setTimeout(() => setToast({ ...toast, show: false }), 3000);
+      return;
+    }
+    // Check if company already has an active job
+    const existingJob = jobs.find(j => j.company?.id === parseInt(newJob.companyId) && j.status === 'OPEN');
+    if (existingJob) {
+      setToast({ show: true, message: 'This company already has an active job posting', type: 'error' });
+      setTimeout(() => setToast({ ...toast, show: false }), 3000);
       return;
     }
     const minCgpa = parseFloat(newJob.minCgpa);
     if (isNaN(minCgpa) || minCgpa < 0 || minCgpa > 10) {
-      alert("Please enter a valid CGPA (0-10).");
+      setToast({ show: true, message: 'Please enter a valid CGPA (0-10)', type: 'error' });
+      setTimeout(() => setToast({ ...toast, show: false }), 3000);
       return;
     }
     if (!newJob.requiredSkills?.length) {
-      alert("Please enter at least one skill.");
+      setToast({ show: true, message: 'Please enter at least one skill', type: 'error' });
+      setTimeout(() => setToast({ ...toast, show: false }), 3000);
       return;
     }
     try {
@@ -130,15 +116,103 @@ const CRCDashboard = () => {
         }
       });
       if (result.errors?.length > 0) {
-        alert(result.errors[0].message);
+        setToast({ show: true, message: result.errors[0].message, type: 'error' });
+        setTimeout(() => setToast({ ...toast, show: false }), 3000);
         return;
       }
       setNewJob({ title: "", companyId: "", description: "", minCgpa: "", requiredSkills: [] });
       setShowJobForm(false);
       refetchJobs();
-      alert("Job posted successfully!");
+      setToast({ show: true, message: 'Job posted successfully! Eligible students have been notified.', type: 'success' });
+      setTimeout(() => setToast({ ...toast, show: false }), 3000);
     } catch (err) {
-      alert(err.message || "Failed to post job");
+      setToast({ show: true, message: err.message || 'Failed to post job', type: 'error' });
+      setTimeout(() => setToast({ ...toast, show: false }), 3000);
+    }
+  };
+
+  const handleEditJob = (job) => {
+    setEditingJob(job);
+    setNewJob({
+      title: job.title,
+      companyId: job.company?.id?.toString(),
+      description: job.description || "",
+      minCgpa: job.minCgpa?.toString(),
+      requiredSkills: job.requiredSkills || []
+    });
+    setShowJobForm(true);
+  };
+
+  const handleUpdateJob = async (e) => {
+    e.preventDefault();
+    if (!editingJob) return handleCreateJob(e);
+
+    if (!newJob.title || newJob.title.length < 3) {
+      setToast({ show: true, message: 'Job title must be at least 3 characters', type: 'error' });
+      setTimeout(() => setToast({ ...toast, show: false }), 3000);
+      return;
+    }
+    const minCgpa = parseFloat(newJob.minCgpa);
+    if (isNaN(minCgpa) || minCgpa < 0 || minCgpa > 10) {
+      setToast({ show: true, message: 'Please enter a valid CGPA (0-10)', type: 'error' });
+      setTimeout(() => setToast({ ...toast, show: false }), 3000);
+      return;
+    }
+    if (!newJob.requiredSkills?.length) {
+      setToast({ show: true, message: 'Please enter at least one skill', type: 'error' });
+      setTimeout(() => setToast({ ...toast, show: false }), 3000);
+      return;
+    }
+    try {
+      const cgpaChanged = editingJob.minCgpa !== minCgpa;
+      await updateJob({
+        variables: {
+          id: editingJob.id,
+          input: {
+            title: newJob.title,
+            description: newJob.description,
+            minCgpa: minCgpa,
+            requiredSkills: newJob.requiredSkills
+          }
+        }
+      });
+      setEditingJob(null);
+      setNewJob({ title: "", companyId: "", description: "", minCgpa: "", requiredSkills: [] });
+      setShowJobForm(false);
+      refetchJobs();
+      const message = cgpaChanged
+        ? 'Job updated! Eligible students have been notified of the CGPA change.'
+        : 'Job updated successfully!';
+      setToast({ show: true, message, type: 'success' });
+      setTimeout(() => setToast({ ...toast, show: false }), 3000);
+    } catch (err) {
+      setToast({ show: true, message: err.message || 'Failed to update job', type: 'error' });
+      setTimeout(() => setToast({ ...toast, show: false }), 3000);
+    }
+  };
+
+  const handleCancelEdit = () => {
+    setEditingJob(null);
+    setNewJob({ title: "", companyId: "", description: "", minCgpa: "", requiredSkills: [] });
+    setShowJobForm(false);
+  };
+
+  const handleDeleteJob = async (job) => {
+    const confirmed = await confirm(
+      `Are you sure you want to delete "${job.title}"? This will remove the job posting and all related data. This action cannot be undone.`,
+      "Delete Job",
+      "crc"
+    );
+    if (confirmed) {
+      try {
+        await deleteJob({ variables: { id: job.id } });
+        refetchJobs();
+        setToast({ show: true, message: 'Job deleted successfully', type: 'success' });
+        setTimeout(() => setToast({ ...toast, show: false }), 3000);
+      } catch (err) {
+        setToast({ show: true, message: err.message || 'Failed to delete job', type: 'error' });
+        setTimeout(() => setToast({ ...toast, show: false }), 3000);
+      }
     }
   };
 
@@ -243,7 +317,7 @@ const CRCDashboard = () => {
           <div className="space-y-6">
             <div>
               <h1 className="text-2xl font-semibold text-zinc-900 tracking-tight">Overview</h1>
-              <p className="text-sm text-zinc-500 mt-1">Training & Placement Cell · NIT Srinagar</p>
+              <p className="text-sm text-zinc-500 mt-1">Training & Placement Department · NIT Srinagar</p>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -311,51 +385,10 @@ const CRCDashboard = () => {
         {/* Companies Tab */}
         {activeTab === "companies" && (
           <div className="space-y-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <h1 className="text-2xl font-semibold text-zinc-900 tracking-tight">My Companies</h1>
-                <p className="text-sm text-zinc-500 mt-1">Manage your assigned companies</p>
-              </div>
-              <button
-                onClick={() => setShowCompanyForm(!showCompanyForm)}
-                className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition-colors"
-              >
-                <Plus className="w-4 h-4" />
-                Add Company
-              </button>
+            <div>
+              <h1 className="text-2xl font-semibold text-zinc-900 tracking-tight">My Companies</h1>
+              <p className="text-sm text-zinc-500 mt-1">Companies assigned to you by admin</p>
             </div>
-
-            {showCompanyForm && (
-              <div className="bg-white border border-zinc-100 rounded-xl p-5">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-sm font-semibold text-zinc-900">Add New Company</h3>
-                  <button onClick={() => setShowCompanyForm(false)} className="text-zinc-400 hover:text-zinc-600">
-                    <X className="w-5 h-5" />
-                  </button>
-                </div>
-                <form onSubmit={handleCreateCompany} className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <input
-                    type="text"
-                    placeholder="Company Name"
-                    value={newCompany.name}
-                    onChange={(e) => setNewCompany({ ...newCompany, name: e.target.value })}
-                    className="px-3 py-2 border border-zinc-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-zinc-900"
-                    required
-                  />
-                  <input
-                    type="text"
-                    placeholder="Description (min 10 characters)"
-                    value={newCompany.description}
-                    onChange={(e) => setNewCompany({ ...newCompany, description: e.target.value })}
-                    className="px-3 py-2 border border-zinc-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-zinc-900"
-                    required
-                  />
-                  <button type="submit" className="bg-indigo-600 text-white py-2 text-sm font-medium rounded-lg hover:bg-indigo-700 transition-colors">
-                    Add Company
-                  </button>
-                </form>
-              </div>
-            )}
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {companies.map((company) => (
@@ -396,64 +429,102 @@ const CRCDashboard = () => {
             </div>
 
             {showJobForm && (
-              <div className="bg-white border border-zinc-100 rounded-xl p-5">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-sm font-semibold text-zinc-900">Post New Job</h3>
-                  <button onClick={() => setShowJobForm(false)} className="text-zinc-400 hover:text-zinc-600">
-                    <X className="w-5 h-5" />
+              <div className="bg-gradient-to-br from-white to-indigo-50/30 rounded-xl shadow-md border border-indigo-100 overflow-hidden">
+                <div className="flex items-center justify-between px-5 py-4 bg-gradient-to-r from-indigo-600 to-indigo-500">
+                  <h3 className="text-sm font-semibold text-white">{editingJob ? 'Edit Job Posting' : 'Post New Job'}</h3>
+                  <button onClick={handleCancelEdit} className="p-1.5 text-white/80 hover:text-white hover:bg-white/20 rounded-lg transition-all">
+                    <X className="w-4 h-4" />
                   </button>
                 </div>
-                <form onSubmit={handleCreateJob} className="space-y-4">
+                <form onSubmit={editingJob ? handleUpdateJob : handleCreateJob} className="p-5 space-y-4">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <input
-                      type="text"
-                      placeholder="Job Title"
-                      value={newJob.title}
-                      onChange={(e) => setNewJob({ ...newJob, title: e.target.value })}
-                      className="px-3 py-2 border border-zinc-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-zinc-900"
-                      required
-                    />
-                    <select
-                      value={newJob.companyId}
-                      onChange={(e) => setNewJob({ ...newJob, companyId: e.target.value })}
-                      className="px-3 py-2 border border-zinc-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-zinc-900 bg-white"
-                      required
-                    >
-                      <option value="">Select Company</option>
-                      {companies.map((c) => (
-                        <option key={c.id} value={c.id}>{c.name}</option>
-                      ))}
-                    </select>
-                    <input
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      max="10"
-                      placeholder="Min CGPA (0-10)"
-                      value={newJob.minCgpa}
-                      onChange={(e) => setNewJob({ ...newJob, minCgpa: e.target.value })}
-                      className="px-3 py-2 border border-zinc-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-zinc-900"
-                      required
-                    />
-                    <input
-                      type="text"
-                      placeholder="Skills (comma separated)"
-                      value={newJob.requiredSkills.join(",")}
-                      onChange={(e) => setNewJob({ ...newJob, requiredSkills: e.target.value.split(",").map(s => s.trim()).filter(s => s) })}
-                      className="px-3 py-2 border border-zinc-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-zinc-900"
-                      required
+                    <div>
+                      <label className="block text-xs font-medium text-zinc-600 mb-1.5">Job Title</label>
+                      <input
+                        type="text"
+                        placeholder="e.g., Software Engineer"
+                        value={newJob.title}
+                        onChange={(e) => setNewJob({ ...newJob, title: e.target.value })}
+                        className="w-full px-3 py-2.5 border border-zinc-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all placeholder:text-zinc-400"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-zinc-600 mb-1.5">Company</label>
+                      <select
+                        value={newJob.companyId}
+                        onChange={(e) => setNewJob({ ...newJob, companyId: e.target.value })}
+                        className="w-full px-3 py-2.5 border border-zinc-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 bg-white transition-all"
+                        required
+                        disabled={!!editingJob}
+                      >
+                        <option value="">Select Company</option>
+                        {companies.map((c) => (
+                          <option key={c.id} value={c.id}>{c.name}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-zinc-600 mb-1.5">Minimum CGPA</label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        max="10"
+                        placeholder="e.g., 7.5"
+                        value={newJob.minCgpa}
+                        onChange={(e) => setNewJob({ ...newJob, minCgpa: e.target.value })}
+                        className="w-full px-3 py-2.5 border border-zinc-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all placeholder:text-zinc-400"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-zinc-600 mb-1.5">Required Skills</label>
+                      <input
+                        type="text"
+                        placeholder="e.g., Java, Python, React"
+                        value={newJob.requiredSkills.join(",")}
+                        onChange={(e) => setNewJob({ ...newJob, requiredSkills: e.target.value.split(",").map(s => s.trim()).filter(s => s) })}
+                        className="w-full px-3 py-2.5 border border-zinc-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all placeholder:text-zinc-400"
+                        required
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-zinc-600 mb-1.5">Job Description</label>
+                    <textarea
+                      placeholder="Describe the role, responsibilities, and requirements..."
+                      value={newJob.description}
+                      onChange={(e) => setNewJob({ ...newJob, description: e.target.value })}
+                      className="w-full px-3 py-2.5 border border-zinc-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 resize-none transition-all placeholder:text-zinc-400"
+                      rows="3"
                     />
                   </div>
-                  <textarea
-                    placeholder="Job Description"
-                    value={newJob.description}
-                    onChange={(e) => setNewJob({ ...newJob, description: e.target.value })}
-                    className="w-full px-3 py-2 border border-zinc-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-zinc-900 resize-none"
-                    rows="2"
-                  />
-                  <button type="submit" className="bg-indigo-600 text-white py-2 px-6 text-sm font-medium rounded-lg hover:bg-indigo-700 transition-colors">
-                    Post Job
-                  </button>
+                  <div className="flex items-center justify-end gap-3 pt-2">
+                    <button
+                      type="button"
+                      onClick={handleCancelEdit}
+                      className="px-5 py-2.5 text-sm font-medium text-zinc-600 hover:text-zinc-800 hover:bg-zinc-100 rounded-xl transition-all"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      className="flex items-center gap-2 px-6 py-2.5 bg-gradient-to-r from-indigo-600 to-indigo-500 text-white text-sm font-medium rounded-xl hover:from-indigo-700 hover:to-indigo-600 shadow-lg shadow-indigo-500/30 hover:shadow-xl hover:shadow-indigo-500/40 transition-all"
+                    >
+                      {editingJob ? (
+                        <>
+                          <Check className="w-4 h-4" />
+                          Update Job
+                        </>
+                      ) : (
+                        <>
+                          <Plus className="w-4 h-4" />
+                          Post Job
+                        </>
+                      )}
+                    </button>
+                  </div>
                 </form>
               </div>
             )}
@@ -464,31 +535,68 @@ const CRCDashboard = () => {
               </div>
               <div className="divide-y divide-zinc-100">
                 {jobs.map((job) => (
-                  <div key={job.id} className="p-5 hover:bg-zinc-50 transition-colors">
+                  <div key={job.id} className={`p-5 transition-colors ${editingJob?.id === job.id ? 'bg-indigo-50/50' : 'hover:bg-zinc-50'}`}>
                     <div className="flex items-start justify-between gap-4">
                       <div className="flex-1">
-                        <h4 className="text-sm font-semibold text-zinc-900">{job.title}</h4>
+                        <h4 className={`text-sm font-semibold ${job.status === "CLOSED" ? "text-zinc-500" : "text-zinc-900"}`}>{job.title}</h4>
                         <p className="text-sm text-zinc-500">{job.company?.name}</p>
                         <p className="text-xs text-zinc-400 mt-2">Min CGPA: {job.minCgpa} · Skills: {job.requiredSkills?.join(", ")}</p>
                       </div>
-                      <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-2">
                         <span className={`px-2.5 py-1 text-xs font-medium rounded-lg ${
-                          job.status === "OPEN" ? "bg-emerald-50 text-emerald-700" : "bg-zinc-100 text-zinc-600"
+                          job.status === "OPEN" ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-700"
                         }`}>
                           {job.status}
                         </span>
-                        {job.status === "OPEN" && (
+                        <button
+                          onClick={() => handleEditJob(job)}
+                          className="p-2 text-zinc-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all"
+                          title="Edit job"
+                          disabled={job.status === "CLOSED"}
+                        >
+                          <Pencil className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => handleDeleteJob(job)}
+                          className="p-2 text-zinc-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
+                          title="Delete job"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                        {job.status === "OPEN" ? (
                           <button
                             onClick={async () => {
                               const confirmed = await confirm("Close this job?", "Confirm Action", "crc");
                               if (confirmed) {
                                 await closeJob({ variables: { id: job.id } });
                                 refetchJobs();
+                                setToast({ show: true, message: 'Job closed successfully', type: 'success' });
+                                setTimeout(() => setToast({ ...toast, show: false }), 3000);
                               }
                             }}
-                            className="text-xs text-red-600 hover:text-red-700 font-medium"
+                            className="text-xs text-red-600 hover:text-red-700 font-medium px-2 py-1"
                           >
                             Close
+                          </button>
+                        ) : (
+                          <button
+                            onClick={async () => {
+                              const confirmed = await confirm("Reopen this job?", "Confirm Action", "crc");
+                              if (confirmed) {
+                                await updateJob({
+                                  variables: {
+                                    id: job.id,
+                                    input: { status: "OPEN" }
+                                  }
+                                });
+                                refetchJobs();
+                                setToast({ show: true, message: 'Job reopened successfully', type: 'success' });
+                                setTimeout(() => setToast({ ...toast, show: false }), 3000);
+                              }
+                            }}
+                            className="text-xs text-emerald-600 hover:text-emerald-700 font-medium px-2 py-1"
+                          >
+                            Reopen
                           </button>
                         )}
                       </div>
@@ -547,6 +655,26 @@ const CRCDashboard = () => {
           </div>
         )}
       </main>
+
+      {/* Toast Notification */}
+      {toast.show && (
+        <div className="fixed bottom-6 right-6 z-50 animate-slide-up">
+          <div className={`flex items-center gap-3 px-5 py-4 rounded-xl shadow-2xl ${
+            toast.type === 'success'
+              ? 'bg-gradient-to-r from-emerald-500 to-teal-500'
+              : 'bg-gradient-to-r from-red-500 to-rose-500'
+          }`}>
+            <div className="p-1.5 bg-white/20 rounded-lg">
+              {toast.type === 'success' ? (
+                <Check className="w-5 h-5 text-white" />
+              ) : (
+                <X className="w-5 h-5 text-white" />
+              )}
+            </div>
+            <span className="text-sm font-medium text-white">{toast.message}</span>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

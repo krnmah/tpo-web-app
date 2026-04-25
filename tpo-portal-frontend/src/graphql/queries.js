@@ -118,6 +118,7 @@ export const GET_STUDENTS = gql`
       name
       enrollmentNumber
       cgpa
+      branch
       skills
       resumeUrl
       reportCardUrl
@@ -186,6 +187,7 @@ export const GET_COMPANIES = gql`
       }
       createdAt
       updatedAt
+      hasActiveJobs
     }
   }
 `;
@@ -227,6 +229,29 @@ export const CREATE_COMPANY = gql`
 export const UPDATE_COMPANY = gql`
   mutation UpdateCompany($id: ID!, $input: UpdateCompanyInput!) {
     updateCompany(id: $id, input: $input) {
+      id
+      name
+      description
+      assignedCRC {
+        id
+        name
+        email
+      }
+      createdAt
+      updatedAt
+    }
+  }
+`;
+
+export const DELETE_COMPANY = gql`
+  mutation DeleteCompany($id: ID!) {
+    deleteCompany(id: $id)
+  }
+`;
+
+export const ASSIGN_CRC_TO_COMPANY = gql`
+  mutation AssignCRCToCompany($companyId: ID!, $crcId: ID!) {
+    assignCRCToCompany(companyId: $companyId, crcId: $crcId) {
       id
       name
       description
@@ -386,6 +411,12 @@ export const CLOSE_JOB = gql`
   }
 `;
 
+export const DELETE_JOB = gql`
+  mutation DeleteJob($id: ID!) {
+    deleteJob(id: $id)
+  }
+`;
+
 // ==================== APPLICATION QUERIES ====================
 
 export const GET_MY_APPLICATIONS = gql`
@@ -512,6 +543,21 @@ export const GET_DASHBOARD_STATS = gql`
       activeJobs
       totalApplications
       placementPercentage
+    }
+  }
+`;
+
+export const GET_PLACED_STUDENTS = gql`
+  query GetPlacedStudents($branch: String) {
+    placedStudents(branch: $branch) {
+      id
+      name
+      email
+      enrollmentNumber
+      branch
+      cgpa
+      companyName
+      placedAt
     }
   }
 `;

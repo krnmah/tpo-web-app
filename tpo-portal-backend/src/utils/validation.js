@@ -49,7 +49,7 @@ const createJobSchema = z.object({
 // Company creation validation schema
 const createCompanySchema = z.object({
   name: z.string().min(2, 'Company name must be at least 2 characters'),
-  description: z.string().min(10, 'Description must be at least 10 characters'),
+  description: z.string().min(10, 'Description must be at least 10 characters').optional().or(z.literal('')),
   assignedCRC: z.number().int().positive().optional()
 });
 

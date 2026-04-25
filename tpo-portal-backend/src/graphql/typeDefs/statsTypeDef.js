@@ -13,8 +13,20 @@ type DashboardStats {
   placementPercentage: Float!
 }
 
+type PlacedStudent {
+  id: ID!
+  name: String!
+  email: String!
+  enrollmentNumber: String
+  branch: String!
+  cgpa: Float!
+  companyName: String!
+  placedAt: String!
+}
+
 extend type Query {
   placementStats: PlacementStats!
   dashboardStats: DashboardStats!
+  placedStudents(branch: String): [PlacedStudent!]!
 }
 `;
