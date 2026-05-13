@@ -1,6 +1,7 @@
 import { useQuery, useMutation } from "@apollo/client";
 import { Link } from "react-router-dom";
 import { GET_ELIGIBLE_JOBS, APPLY_FOR_JOB, GET_MY_APPLICATIONS } from "../../graphql/queries";
+import { getSalaryDisplay } from "../../utils/formatCurrency";
 import {
   Briefcase,
   Building2,
@@ -9,6 +10,7 @@ import {
   Tag,
   Check,
   ArrowRight,
+  IndianRupee,
 } from "../../components/Icons";
 
 const EligibleCompanies = () => {
@@ -89,6 +91,15 @@ const EligibleCompanies = () => {
                     </span>
                     <span className="font-medium text-zinc-900">{job.minCgpa}</span>
                   </div>
+                  {job.jobType && getSalaryDisplay(job) !== 'N/A' && (
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-zinc-500 flex items-center gap-1.5">
+                        <IndianRupee className="w-4 h-4" />
+                        {job.jobType.replace(/_/g, ' ')}
+                      </span>
+                      <span className="font-medium text-zinc-900">{getSalaryDisplay(job)}</span>
+                    </div>
+                  )}
                   <div className="flex items-center justify-between text-sm">
                     <span className="text-zinc-500 flex items-center gap-1.5">
                       <Users className="w-4 h-4" />

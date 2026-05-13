@@ -1,5 +1,6 @@
 import { useQuery, useMutation } from "@apollo/client";
 import { GET_JOBS, APPLY_FOR_JOB, GET_MY_APPLICATIONS } from "../../graphql/queries";
+import { getSalaryDisplay } from "../../utils/formatCurrency";
 
 const AllCompanies = () => {
   const { data, loading, refetch } = useQuery(GET_JOBS, {
@@ -62,6 +63,12 @@ const AllCompanies = () => {
 
                 <div className="space-y-1.5 text-xs text-gray-600 mb-3">
                   <p className="flex items-center gap-1"><span className="text-zinc-400">CGPA:</span> {job.minCgpa}</p>
+                  {job.jobType && getSalaryDisplay(job) !== 'N/A' && (
+                    <p className="flex items-center gap-1">
+                      <span className="text-zinc-400">{job.jobType.replace(/_/g, ' ')}:</span>
+                      <span className="text-zinc-700 font-medium">{getSalaryDisplay(job)}</span>
+                    </p>
+                  )}
                   <div className="flex items-center gap-1">
                     <span className="text-zinc-400 shrink-0">Skills:</span>
                     <div className="flex flex-wrap gap-1">

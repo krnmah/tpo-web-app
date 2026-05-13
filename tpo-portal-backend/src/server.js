@@ -9,7 +9,13 @@ const { logSystem } = require('./utils/logger');
 const schema = require('./graphql/schema');
 require('dotenv').config();
 
+// Email queue worker
+let emailWorkerClose;
+
 async function startServer() {
+  // Initialize email queue
+  const { initializeQueue, isQueueAvailable } = require('./queues/emailQueue');
+  await initializeQueue();
   const app = express();
 
   // Health check endpoint (must be before Apollo middleware)
@@ -85,6 +91,19 @@ async function startServer() {
 
   const PORT = process.env.PORT || 4000;
 
+  // Start email queue worker (only if Redis is available)
+  try {
+    const { startWorker } = require('./workers/emailWorker');
+    const worker = await startWorker();
+    if (worker) {
+      const { shutdown } = require('./workers/emailWorker');
+      emailWorkerClose = shutdown;
+      console.log('📧 Email queue worker started');
+    }
+  } catch (error) {
+    console.warn('⚠️  Email worker not started (Redis may be unavailable):', error.message);
+  }
+
   app.listen(PORT, () => {
     logSystem.startup();
     console.log(`🚀 Server running on http://localhost:${PORT}/graphql`);
@@ -93,17 +112,25 @@ async function startServer() {
   });
 
   // Graceful shutdown
-  process.on('SIGTERM', () => {
+  const shutdown = async () => {
     logSystem.shutdown();
-    console.log('SIGTERM received, shutting down gracefully...');
-    process.exit(0);
-  });
+    console.log('Shutting down gracefully...');
 
-  process.on('SIGINT', () => {
-    logSystem.shutdown();
-    console.log('SIGINT received, shutting down gracefully...');
+    // Close email worker
+    if (emailWorkerClose) {
+      try {
+        await emailWorkerClose();
+        console.log('📧 Email worker stopped');
+      } catch (err) {
+        console.error('Error stopping email worker:', err.message);
+      }
+    }
+
     process.exit(0);
-  });
+  };
+
+  process.on('SIGTERM', shutdown);
+  process.on('SIGINT', shutdown);
 
   return app;
 }

@@ -12,7 +12,12 @@ const {
   validateLogin,
   validatePasswordReset,
   isValidEmailDomain,
-  sanitizeUser
+  sanitizeUser,
+  mobileSchema,
+  categorySchema,
+  genderSchema,
+  urlSchema,
+  personalEmailSchema
 } = require('../../utils/validation');
 const { sendOTP } = require('../../utils/email');
 const { checkOTPRateLimit, checkLoginRateLimit } = require('../../utils/rateLimiter');
@@ -54,6 +59,17 @@ throw error;
           throw new Error('Email already registered');
         }
 
+        // Check if personal email already exists
+        if (validated.personalEmail) {
+          const existingPersonalEmail = await prisma.user.findUnique({
+            where: { personalEmail: validated.personalEmail }
+          });
+
+          if (existingPersonalEmail) {
+            throw new Error('Personal email already registered');
+          }
+        }
+
         // Check if enrollment number already exists
         if (validated.enrollmentNumber) {
           const existingEnrollment = await prisma.user.findUnique({
@@ -63,6 +79,11 @@ throw error;
           if (existingEnrollment) {
             throw new Error('Enrollment number already registered');
           }
+        }
+
+        // Conditional validation: category certificate required if category !== GENERAL
+        if (validated.category !== 'GENERAL' && (!validated.categoryCertificateUrl || validated.categoryCertificateUrl === '')) {
+          throw new Error('Category certificate URL is required for your category');
         }
 
         // Hash password
@@ -80,7 +101,14 @@ throw error;
             skills: validated.skills,
             resumeUrl: validated.resumeUrl,
             reportCardUrl: validated.reportCardUrl,
-            role: 'STUDENT'
+            role: 'STUDENT',
+            // New fields
+            mobile: validated.mobile,
+            category: validated.category,
+            categoryCertificateUrl: validated.categoryCertificateUrl || null,
+            domicileUrl: validated.domicileUrl || null,
+            personalEmail: validated.personalEmail,
+            gender: validated.gender
           }
         });
 

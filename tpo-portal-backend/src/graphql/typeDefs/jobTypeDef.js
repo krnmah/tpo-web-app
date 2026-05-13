@@ -1,4 +1,11 @@
 module.exports = `
+enum JobType {
+  INTERN_ONLY
+  INTERN_PPO
+  INTERN_FTE
+  FTE_ONLY
+}
+
 enum JobStatus {
   OPEN
   CLOSED
@@ -12,6 +19,10 @@ type Job {
   minCgpa: Float!
   requiredSkills: [String!]!
   status: JobStatus!
+  jobType: JobType!
+  stipendAmount: Float
+  ppoAmount: Float
+  ctcAmount: Float
   createdAt: String!
   updatedAt: String!
   _applicationCount: Int
@@ -25,6 +36,10 @@ input CreateJobInput {
   minCgpa: Float!
   requiredSkills: [String!]!
   status: JobStatus
+  jobType: JobType!
+  stipendAmount: Float
+  ppoAmount: Float
+  ctcAmount: Float
 }
 
 input UpdateJobInput {
@@ -33,6 +48,10 @@ input UpdateJobInput {
   minCgpa: Float
   requiredSkills: [String!]
   status: JobStatus
+  jobType: JobType
+  stipendAmount: Float
+  ppoAmount: Float
+  ctcAmount: Float
 }
 
 extend type Query {

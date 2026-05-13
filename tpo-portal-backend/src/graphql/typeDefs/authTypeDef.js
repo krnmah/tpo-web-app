@@ -25,6 +25,12 @@ extend type Mutation {
     skills: [String!]!
     resumeUrl: String!
     reportCardUrl: String!
+    mobile: String!
+    category: Category!
+    categoryCertificateUrl: String
+    domicileUrl: String
+    personalEmail: String!
+    gender: Gender!
   ): AuthPayload!
 
   # Login for all users

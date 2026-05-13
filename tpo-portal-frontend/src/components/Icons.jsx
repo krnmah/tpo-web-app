@@ -261,3 +261,13 @@ export const Trash2 = (props) => (
     <line x1="14" x2="14" y1="11" y2="17" />
   </svg>
 );
+
+export const IndianRupee = (props) => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+    <path d="M6 3h12" />
+    <path d="M6 8h12" />
+    <path d="M6 13h12" />
+    <path d="M6 13c0 4 4.5 6 6 6s6-2 6-6" />
+    <path d="M12 3v10" />
+  </svg>
+);

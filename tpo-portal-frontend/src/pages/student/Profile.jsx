@@ -53,7 +53,12 @@ const Profile = () => {
   const [editForm, setEditForm] = useState({
     cgpa: user?.cgpa || "",
     resumeUrl: user?.resumeUrl || "",
-    reportCardUrl: user?.reportCardUrl || ""
+    reportCardUrl: user?.reportCardUrl || "",
+    // New editable fields
+    mobile: user?.mobile || "",
+    categoryCertificateUrl: user?.categoryCertificateUrl || "",
+    domicileUrl: user?.domicileUrl || "",
+    personalEmail: user?.personalEmail || ""
   });
 
   // Password visibility states
@@ -80,10 +85,29 @@ const Profile = () => {
       return;
     }
 
+    // Mobile validation
+    const mobileRegex = /^[6-9]\d{9}$/;
+    if (editForm.mobile && !mobileRegex.test(editForm.mobile.trim())) {
+      setError("Mobile number must be 10 digits starting with 6-9");
+      return;
+    }
+
+    // Personal email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (editForm.personalEmail && !emailRegex.test(editForm.personalEmail.trim())) {
+      setError("Please enter a valid personal email address");
+      return;
+    }
+
     try {
       const variables = { cgpa: cgpa };
       if (editForm.resumeUrl) variables.resumeUrl = editForm.resumeUrl;
       if (editForm.reportCardUrl) variables.reportCardUrl = editForm.reportCardUrl;
+      // New editable fields
+      if (editForm.mobile) variables.mobile = editForm.mobile.trim();
+      if (editForm.categoryCertificateUrl !== undefined) variables.categoryCertificateUrl = editForm.categoryCertificateUrl.trim() || null;
+      if (editForm.domicileUrl !== undefined) variables.domicileUrl = editForm.domicileUrl.trim() || null;
+      if (editForm.personalEmail) variables.personalEmail = editForm.personalEmail.trim();
 
       const result = await updateProfile({
         variables
@@ -205,6 +229,14 @@ const Profile = () => {
               <p className="font-medium">{user.email}</p>
             </div>
             <div>
+              <p className="text-sm text-gray-500 mb-1">Personal Email</p>
+              <p className="font-medium">{user.personalEmail || "N/A"}</p>
+            </div>
+            <div>
+              <p className="text-sm text-gray-500 mb-1">Mobile</p>
+              <p className="font-medium">{user.mobile || "N/A"}</p>
+            </div>
+            <div>
               <p className="text-sm text-gray-500 mb-1">Enrollment Number</p>
               <p className="font-medium font-mono">{user.enrollmentNumber || "N/A"}</p>
             </div>
@@ -215,6 +247,14 @@ const Profile = () => {
             <div>
               <p className="text-sm text-gray-500 mb-1">CGPA</p>
               <p className="font-medium">{user.cgpa || "N/A"}</p>
+            </div>
+            <div>
+              <p className="text-sm text-gray-500 mb-1">Category</p>
+              <p className="font-medium">{user.category || "N/A"}</p>
+            </div>
+            <div>
+              <p className="text-sm text-gray-500 mb-1">Gender</p>
+              <p className="font-medium">{user.gender || "N/A"}</p>
             </div>
             <div className="md:col-span-2">
               <p className="text-sm text-gray-500 mb-2">Documents</p>
@@ -243,6 +283,30 @@ const Profile = () => {
                 ) : (
                   <span className="text-gray-400">No report card uploaded</span>
                 )}
+                {user.categoryCertificateUrl ? (
+                  <a
+                    href={user.categoryCertificateUrl}
+                    className="text-zinc-900 hover:underline inline-flex items-center gap-1"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    📑 Category Certificate
+                  </a>
+                ) : (
+                  <span className="text-gray-400">No category certificate uploaded</span>
+                )}
+                {user.domicileUrl ? (
+                  <a
+                    href={user.domicileUrl}
+                    className="text-zinc-900 hover:underline inline-flex items-center gap-1"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    🏠 Domicile Certificate
+                  </a>
+                ) : (
+                  <span className="text-gray-400">No domicile certificate uploaded</span>
+                )}
               </div>
             </div>
           </div>
@@ -263,6 +327,56 @@ const Profile = () => {
                 <p className="text-sm text-gray-500 mb-1">Branch</p>
                 <p className="font-medium text-gray-700">{user?.branch || "N/A"}</p>
                 <p className="text-xs text-gray-400">Branch cannot be changed</p>
+              </div>
+              <div>
+                <p className="text-sm text-gray-500 mb-1">Category</p>
+                <p className="font-medium text-gray-700">{user?.category || "N/A"}</p>
+                <p className="text-xs text-gray-400">Category cannot be changed</p>
+              </div>
+              <div>
+                <p className="text-sm text-gray-500 mb-1">Gender</p>
+                <p className="font-medium text-gray-700">{user?.gender || "N/A"}</p>
+                <p className="text-xs text-gray-400">Gender cannot be changed</p>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Mobile Number</label>
+                <input
+                  type="tel"
+                  value={editForm.mobile}
+                  onChange={(e) => setEditForm({ ...editForm, mobile: e.target.value.replace(/\D/g, '').slice(0, 10) })}
+                  placeholder="10-digit mobile number"
+                  className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-zinc-900"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Personal Email</label>
+                <input
+                  type="email"
+                  value={editForm.personalEmail}
+                  onChange={(e) => setEditForm({ ...editForm, personalEmail: e.target.value })}
+                  placeholder="your.email@gmail.com"
+                  className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-zinc-900"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Category Certificate URL</label>
+                <input
+                  type="url"
+                  value={editForm.categoryCertificateUrl}
+                  onChange={(e) => setEditForm({ ...editForm, categoryCertificateUrl: e.target.value })}
+                  placeholder="https://drive.google.com/..."
+                  className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-zinc-900"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Domicile Certificate URL</label>
+                <input
+                  type="url"
+                  value={editForm.domicileUrl}
+                  onChange={(e) => setEditForm({ ...editForm, domicileUrl: e.target.value })}
+                  placeholder="https://drive.google.com/..."
+                  className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-zinc-900"
+                />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">CGPA</label>
@@ -314,7 +428,11 @@ const Profile = () => {
                   setEditForm({
                     cgpa: user?.cgpa || "",
                     resumeUrl: user?.resumeUrl || "",
-                    reportCardUrl: user?.reportCardUrl || ""
+                    reportCardUrl: user?.reportCardUrl || "",
+                    mobile: user?.mobile || "",
+                    categoryCertificateUrl: user?.categoryCertificateUrl || "",
+                    domicileUrl: user?.domicileUrl || "",
+                    personalEmail: user?.personalEmail || ""
                   });
                 }}
                 className="px-6 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300"

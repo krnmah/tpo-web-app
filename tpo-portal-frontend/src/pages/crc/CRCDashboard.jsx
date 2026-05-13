@@ -6,6 +6,8 @@ import { useConfirm } from "../../components/ConfirmDialog";
 import { GET_MY_ASSIGNED_COMPANIES } from "../../graphql/queries";
 import { GET_JOBS, CREATE_JOB, CLOSE_JOB, UPDATE_JOB, DELETE_JOB } from "../../graphql/queries";
 import { GET_APPLICATIONS_BY_COMPANY, UPDATE_APPLICATION_STATUS } from "../../graphql/queries";
+import { CREATE_MY_COMPANY } from "../../graphql/queries";
+import { getSalaryDisplay, getRequiredFields, validateSalaryFields } from "../../utils/formatCurrency";
 import {
   LayoutDashboard,
   Building2,
@@ -33,6 +35,8 @@ const CRCDashboard = () => {
   const [editingJob, setEditingJob] = useState(null);
   const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
   const isStudentMode = activeRole === 'STUDENT';
+  const [showCompanyForm, setShowCompanyForm] = useState(false);
+  const [newCompany, setNewCompany] = useState({ name: "", description: "" });
 
   const handleLogout = async () => {
     const confirmed = await confirm(
@@ -63,6 +67,7 @@ const CRCDashboard = () => {
   const [updateJob] = useMutation(UPDATE_JOB);
   const [deleteJob] = useMutation(DELETE_JOB);
   const [updateApplicationStatus] = useMutation(UPDATE_APPLICATION_STATUS);
+  const [createMyCompany] = useMutation(CREATE_MY_COMPANY);
 
   // Forms
   const [newJob, setNewJob] = useState({
@@ -70,7 +75,11 @@ const CRCDashboard = () => {
     companyId: "",
     description: "",
     minCgpa: "",
-    requiredSkills: []
+    requiredSkills: [],
+    jobType: "INTERN_ONLY",
+    stipendAmount: "",
+    ppoAmount: "",
+    ctcAmount: ""
   });
 
   const handleCreateJob = async (e) => {
@@ -103,6 +112,21 @@ const CRCDashboard = () => {
       setTimeout(() => setToast({ ...toast, show: false }), 3000);
       return;
     }
+
+    // Validate salary fields based on job type
+    const salaryData = {
+      jobType: newJob.jobType,
+      stipendAmount: newJob.stipendAmount ? parseFloat(newJob.stipendAmount) : null,
+      ppoAmount: newJob.ppoAmount ? parseFloat(newJob.ppoAmount) : null,
+      ctcAmount: newJob.ctcAmount ? parseFloat(newJob.ctcAmount) : null
+    };
+    const salaryValidation = validateSalaryFields(salaryData);
+    if (!salaryValidation.valid) {
+      setToast({ show: true, message: salaryValidation.error, type: 'error' });
+      setTimeout(() => setToast({ ...toast, show: false }), 3000);
+      return;
+    }
+
     try {
       const result = await createJob({
         variables: {
@@ -111,7 +135,11 @@ const CRCDashboard = () => {
             companyId: parseInt(newJob.companyId),
             description: newJob.description,
             minCgpa: minCgpa,
-            requiredSkills: newJob.requiredSkills
+            requiredSkills: newJob.requiredSkills,
+            jobType: newJob.jobType,
+            stipendAmount: salaryData.stipendAmount,
+            ppoAmount: salaryData.ppoAmount,
+            ctcAmount: salaryData.ctcAmount
           }
         }
       });
@@ -120,7 +148,17 @@ const CRCDashboard = () => {
         setTimeout(() => setToast({ ...toast, show: false }), 3000);
         return;
       }
-      setNewJob({ title: "", companyId: "", description: "", minCgpa: "", requiredSkills: [] });
+      setNewJob({
+        title: "",
+        companyId: "",
+        description: "",
+        minCgpa: "",
+        requiredSkills: [],
+        jobType: "INTERN_ONLY",
+        stipendAmount: "",
+        ppoAmount: "",
+        ctcAmount: ""
+      });
       setShowJobForm(false);
       refetchJobs();
       setToast({ show: true, message: 'Job posted successfully! Eligible students have been notified.', type: 'success' });
@@ -138,7 +176,11 @@ const CRCDashboard = () => {
       companyId: job.company?.id?.toString(),
       description: job.description || "",
       minCgpa: job.minCgpa?.toString(),
-      requiredSkills: job.requiredSkills || []
+      requiredSkills: job.requiredSkills || [],
+      jobType: job.jobType || "INTERN_ONLY",
+      stipendAmount: job.stipendAmount?.toString() || "",
+      ppoAmount: job.ppoAmount?.toString() || "",
+      ctcAmount: job.ctcAmount?.toString() || ""
     });
     setShowJobForm(true);
   };
@@ -163,6 +205,21 @@ const CRCDashboard = () => {
       setTimeout(() => setToast({ ...toast, show: false }), 3000);
       return;
     }
+
+    // Validate salary fields based on job type
+    const salaryData = {
+      jobType: newJob.jobType,
+      stipendAmount: newJob.stipendAmount ? parseFloat(newJob.stipendAmount) : null,
+      ppoAmount: newJob.ppoAmount ? parseFloat(newJob.ppoAmount) : null,
+      ctcAmount: newJob.ctcAmount ? parseFloat(newJob.ctcAmount) : null
+    };
+    const salaryValidation = validateSalaryFields(salaryData);
+    if (!salaryValidation.valid) {
+      setToast({ show: true, message: salaryValidation.error, type: 'error' });
+      setTimeout(() => setToast({ ...toast, show: false }), 3000);
+      return;
+    }
+
     try {
       const cgpaChanged = editingJob.minCgpa !== minCgpa;
       await updateJob({
@@ -172,12 +229,26 @@ const CRCDashboard = () => {
             title: newJob.title,
             description: newJob.description,
             minCgpa: minCgpa,
-            requiredSkills: newJob.requiredSkills
+            requiredSkills: newJob.requiredSkills,
+            jobType: newJob.jobType,
+            stipendAmount: salaryData.stipendAmount,
+            ppoAmount: salaryData.ppoAmount,
+            ctcAmount: salaryData.ctcAmount
           }
         }
       });
       setEditingJob(null);
-      setNewJob({ title: "", companyId: "", description: "", minCgpa: "", requiredSkills: [] });
+      setNewJob({
+        title: "",
+        companyId: "",
+        description: "",
+        minCgpa: "",
+        requiredSkills: [],
+        jobType: "INTERN_ONLY",
+        stipendAmount: "",
+        ppoAmount: "",
+        ctcAmount: ""
+      });
       setShowJobForm(false);
       refetchJobs();
       const message = cgpaChanged
@@ -193,8 +264,64 @@ const CRCDashboard = () => {
 
   const handleCancelEdit = () => {
     setEditingJob(null);
-    setNewJob({ title: "", companyId: "", description: "", minCgpa: "", requiredSkills: [] });
+    setNewJob({
+      title: "",
+      companyId: "",
+      description: "",
+      minCgpa: "",
+      requiredSkills: [],
+      jobType: "INTERN_ONLY",
+      stipendAmount: "",
+      ppoAmount: "",
+      ctcAmount: ""
+    });
     setShowJobForm(false);
+  };
+
+  const handleCreateCompany = async (e) => {
+    e.preventDefault();
+
+    // Validation: name minimum 2 characters
+    if (!newCompany.name || newCompany.name.length < 2) {
+      setToast({ show: true, message: 'Company name must be at least 2 characters', type: 'error' });
+      setTimeout(() => setToast({ ...toast, show: false }), 3000);
+      return;
+    }
+
+    // Validation: description minimum 10 characters
+    if (!newCompany.description || newCompany.description.length < 10) {
+      setToast({ show: true, message: 'Description must be at least 10 characters', type: 'error' });
+      setTimeout(() => setToast({ ...toast, show: false }), 3000);
+      return;
+    }
+
+    try {
+      const result = await createMyCompany({
+        variables: {
+          name: newCompany.name,
+          description: newCompany.description
+        }
+      });
+
+      if (result.errors?.length > 0) {
+        setToast({ show: true, message: result.errors[0].message, type: 'error' });
+        setTimeout(() => setToast({ ...toast, show: false }), 3000);
+        return;
+      }
+
+      // Reset form and close
+      setNewCompany({ name: "", description: "" });
+      setShowCompanyForm(false);
+
+      // Refetch companies to show the new one
+      refetchCompanies();
+
+      setToast({ show: true, message: 'Company created successfully! You can now post jobs for this company.', type: 'success' });
+      setTimeout(() => setToast({ ...toast, show: false }), 3000);
+    } catch (err) {
+      setToast({ show: true, message: err.message || 'Failed to create company', type: 'error' });
+      setTimeout(() => setToast({ ...toast, show: false }), 3000);
+    }
   };
 
   const handleDeleteJob = async (job) => {
@@ -321,7 +448,7 @@ const CRCDashboard = () => {
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              <StatCard label="Assigned Companies" value={companies.length} />
+              <StatCard label="My Companies" value={companies.length} />
               <StatCard label="Active Jobs" value={jobs.filter(j => j.status === "OPEN").length} />
               <StatCard label="Total Applicants" value={jobs.reduce((sum, j) => sum + (j._applicationCount || 0), 0)} />
               <StatCard label="Open Positions" value={jobs.filter(j => j.status === "OPEN").length} />
@@ -362,9 +489,15 @@ const CRCDashboard = () => {
                       {jobs.slice(0, 5).map((job) => (
                         <div key={job.id} className="p-3 border border-zinc-100 rounded-lg">
                           <div className="flex items-start justify-between">
-                            <div>
+                            <div className="flex-1">
                               <p className="text-sm font-medium text-zinc-900">{job.title}</p>
                               <p className="text-xs text-zinc-500 mt-1">{job.company?.name}</p>
+                              {job.jobType && (
+                                <p className="text-xs text-zinc-400 mt-1">
+                                  {job.jobType.replace(/_/g, ' ')}
+                                  {getSalaryDisplay(job) !== 'N/A' && ` · ${getSalaryDisplay(job)}`}
+                                </p>
+                              )}
                             </div>
                             <span className={`px-2 py-1 text-xs font-medium rounded ${
                               job.status === "OPEN" ? "bg-emerald-50 text-emerald-700" : "bg-zinc-100 text-zinc-600"
@@ -385,10 +518,77 @@ const CRCDashboard = () => {
         {/* Companies Tab */}
         {activeTab === "companies" && (
           <div className="space-y-6">
-            <div>
-              <h1 className="text-2xl font-semibold text-zinc-900 tracking-tight">My Companies</h1>
-              <p className="text-sm text-zinc-500 mt-1">Companies assigned to you by admin</p>
+            <div className="flex items-center justify-between">
+              <div>
+                <h1 className="text-2xl font-semibold text-zinc-900 tracking-tight">My Companies</h1>
+                <p className="text-sm text-zinc-500 mt-1">Manage your companies</p>
+              </div>
+              <button
+                onClick={() => setShowCompanyForm(true)}
+                className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition-colors"
+              >
+                <Plus className="w-4 h-4" />
+                Create Company
+              </button>
             </div>
+
+            {/* Company Creation Form */}
+            {showCompanyForm && (
+              <div className="bg-gradient-to-br from-white to-indigo-50/30 rounded-xl shadow-md border border-indigo-100 overflow-hidden">
+                <div className="flex items-center justify-between px-5 py-4 bg-gradient-to-r from-indigo-600 to-indigo-500">
+                  <h3 className="text-sm font-semibold text-white">Create New Company</h3>
+                  <button
+                    onClick={() => setShowCompanyForm(false)}
+                    className="p-1.5 text-white/80 hover:text-white hover:bg-white/20 rounded-lg transition-all"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+                <form onSubmit={handleCreateCompany} className="p-5 space-y-4">
+                  <div>
+                    <label className="block text-xs font-medium text-zinc-600 mb-1.5">Company Name *</label>
+                    <input
+                      type="text"
+                      placeholder="e.g., Google, Microsoft, Amazon"
+                      value={newCompany.name}
+                      onChange={(e) => setNewCompany({ ...newCompany, name: e.target.value })}
+                      className="w-full px-3 py-2.5 border border-zinc-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all placeholder:text-zinc-400"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-zinc-600 mb-1.5">Description *</label>
+                    <textarea
+                      placeholder="Brief description about the company, industry, type of work..."
+                      value={newCompany.description}
+                      onChange={(e) => setNewCompany({ ...newCompany, description: e.target.value })}
+                      className="w-full px-3 py-2.5 border border-zinc-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 resize-none transition-all placeholder:text-zinc-400"
+                      rows="3"
+                      required
+                    />
+                  </div>
+                  <div className="flex items-center justify-end gap-3 pt-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowCompanyForm(false);
+                        setNewCompany({ name: "", description: "" });
+                      }}
+                      className="px-5 py-2.5 text-sm font-medium text-zinc-600 hover:text-zinc-800 hover:bg-zinc-100 rounded-xl transition-all"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      className="flex items-center gap-2 px-6 py-2.5 bg-gradient-to-r from-indigo-600 to-indigo-500 text-white text-sm font-medium rounded-xl hover:from-indigo-700 hover:to-indigo-600 shadow-lg shadow-indigo-500/30 hover:shadow-xl hover:shadow-indigo-500/40 transition-all"
+                    >
+                      <Plus className="w-4 h-4" />
+                      Create Company
+                    </button>
+                  </div>
+                </form>
+              </div>
+            )}
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {companies.map((company) => (
@@ -404,7 +604,14 @@ const CRCDashboard = () => {
               {companies.length === 0 && (
                 <div className="col-span-full bg-white border border-slate-100 rounded-xl p-12 text-center">
                   <Building2 className="w-12 h-12 text-slate-300 mx-auto mb-4" />
-                  <p className="text-sm text-slate-500">No companies assigned yet</p>
+                  <p className="text-sm text-slate-500 mb-4">No companies yet. Create your first company to get started!</p>
+                  <button
+                    onClick={() => setShowCompanyForm(true)}
+                    className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition-colors"
+                  >
+                    <Plus className="w-4 h-4" />
+                    Create Company
+                  </button>
                 </div>
               )}
             </div>
@@ -465,6 +672,20 @@ const CRCDashboard = () => {
                       </select>
                     </div>
                     <div>
+                      <label className="block text-xs font-medium text-zinc-600 mb-1.5">Job Type *</label>
+                      <select
+                        value={newJob.jobType}
+                        onChange={(e) => setNewJob({ ...newJob, jobType: e.target.value })}
+                        className="w-full px-3 py-2.5 border border-zinc-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 bg-white transition-all"
+                        required
+                      >
+                        <option value="INTERN_ONLY">Intern Only</option>
+                        <option value="INTERN_PPO">Intern + PPO</option>
+                        <option value="INTERN_FTE">Intern + FTE</option>
+                        <option value="FTE_ONLY">FTE Only</option>
+                      </select>
+                    </div>
+                    <div>
                       <label className="block text-xs font-medium text-zinc-600 mb-1.5">Minimum CGPA</label>
                       <input
                         type="number"
@@ -478,6 +699,56 @@ const CRCDashboard = () => {
                         required
                       />
                     </div>
+
+                    {/* Conditional Salary Fields */}
+                    {getRequiredFields(newJob.jobType).stipend && (
+                      <div>
+                        <label className="block text-xs font-medium text-zinc-600 mb-1.5">Stipend Amount (₹/month) *</label>
+                        <input
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          placeholder="e.g., 50000"
+                          value={newJob.stipendAmount}
+                          onChange={(e) => setNewJob({ ...newJob, stipendAmount: e.target.value })}
+                          className="w-full px-3 py-2.5 border border-zinc-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all placeholder:text-zinc-400"
+                          required
+                        />
+                      </div>
+                    )}
+
+                    {getRequiredFields(newJob.jobType).ppo && (
+                      <div>
+                        <label className="block text-xs font-medium text-zinc-600 mb-1.5">PPO Amount (₹/year) *</label>
+                        <input
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          placeholder="e.g., 1200000"
+                          value={newJob.ppoAmount}
+                          onChange={(e) => setNewJob({ ...newJob, ppoAmount: e.target.value })}
+                          className="w-full px-3 py-2.5 border border-zinc-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all placeholder:text-zinc-400"
+                          required
+                        />
+                      </div>
+                    )}
+
+                    {getRequiredFields(newJob.jobType).ctc && (
+                      <div>
+                        <label className="block text-xs font-medium text-zinc-600 mb-1.5">CTC Amount (₹/year) *</label>
+                        <input
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          placeholder="e.g., 1500000"
+                          value={newJob.ctcAmount}
+                          onChange={(e) => setNewJob({ ...newJob, ctcAmount: e.target.value })}
+                          className="w-full px-3 py-2.5 border border-zinc-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all placeholder:text-zinc-400"
+                          required
+                        />
+                      </div>
+                    )}
+
                     <div>
                       <label className="block text-xs font-medium text-zinc-600 mb-1.5">Required Skills</label>
                       <input
@@ -540,7 +811,15 @@ const CRCDashboard = () => {
                       <div className="flex-1">
                         <h4 className={`text-sm font-semibold ${job.status === "CLOSED" ? "text-zinc-500" : "text-zinc-900"}`}>{job.title}</h4>
                         <p className="text-sm text-zinc-500">{job.company?.name}</p>
-                        <p className="text-xs text-zinc-400 mt-2">Min CGPA: {job.minCgpa} · Skills: {job.requiredSkills?.join(", ")}</p>
+                        <p className="text-xs text-zinc-400 mt-2">
+                          Min CGPA: {job.minCgpa} · Skills: {job.requiredSkills?.join(", ")}
+                        </p>
+                        {job.jobType && (
+                          <p className="text-xs text-zinc-400 mt-1">
+                            Type: {job.jobType.replace(/_/g, ' ')}
+                            {getSalaryDisplay(job) !== 'N/A' && ` · ${getSalaryDisplay(job)}`}
+                          </p>
+                        )}
                       </div>
                       <div className="flex items-center gap-2">
                         <span className={`px-2.5 py-1 text-xs font-medium rounded-lg ${

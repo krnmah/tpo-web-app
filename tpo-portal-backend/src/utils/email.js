@@ -350,10 +350,105 @@ async function sendJobNotificationEmail({ emails, companyName, jobTitle, minCgpa
   }
 }
 
+/**
+ * Send individual job notification email to a single student
+ * Used by BullMQ worker with rate limiting
+ * @param {Object} params - Email parameters
+ * @param {string} params.email - Student email
+ * @param {string} params.studentName - Student name (optional)
+ * @param {string} params.companyName - Company name
+ * @param {string} params.jobTitle - Job title
+ * @param {number} params.minCgpa - Minimum CGPA required
+ * @returns {Promise<Object>} - Result with success status
+ */
+async function sendIndividualJobEmail({ email, studentName, companyName, jobTitle, minCgpa }) {
+  const mailTransporter = initEmail();
+
+  if (!mailTransporter) {
+    logger.info(`[DEV MODE] Job notification would be sent to ${email} for ${companyName} - ${jobTitle}`);
+    return { success: true, email };
+  }
+
+  const mailOptions = {
+    from: process.env.EMAIL_FROM || `"TNP Portal" <${process.env.SMTP_USER}>`,
+    to: email,
+    subject: `🎯 New Job Opportunity: ${jobTitle} at ${companyName}`,
+    html: `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>New Job Opportunity</title>
+        <style>
+          body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+          .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+          .header { background: linear-gradient(135deg, #0B5ED7 0%, #0848a8 100%); color: white; padding: 25px 20px; text-align: center; border-radius: 12px 12px 0 0; }
+          .content { background: #f9f9f9; padding: 30px; border: 1px solid #ddd; border-radius: 0 0 12px 12px; }
+          .job-card { background: white; border-left: 4px solid #0B5ED7; padding: 20px; margin: 20px 0; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+          .job-title { font-size: 20px; font-weight: bold; color: #0B5ED7; margin-bottom: 8px; }
+          .company-name { font-size: 16px; color: #555; margin-bottom: 15px; }
+          .requirement { background: #fff3cd; padding: 12px; border-radius: 6px; margin: 15px 0; }
+          .footer { text-align: center; margin-top: 25px; font-size: 12px; color: #777; }
+          .highlight { color: #0B5ED7; font-weight: bold; }
+          .btn { display: inline-block; padding: 12px 30px; background: #0B5ED7; color: white; text-decoration: none; border-radius: 6px; margin-top: 15px; }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
+            <h1>🎯 New Job Opportunity</h1>
+          </div>
+          <div class="content">
+            ${studentName ? `<p>Dear <strong>${studentName}</strong>,</p>` : '<p>Dear Student,</p>'}
+            <p>A new job opportunity matching your profile has been posted on the TNP Portal.</p>
+
+            <div class="job-card">
+              <div class="job-title">${jobTitle}</div>
+              <div class="company-name">🏢 ${companyName}</div>
+              <div class="requirement">
+                <strong>Required CGPA:</strong> <span class="highlight">${minCgpa}+</span>
+              </div>
+            </div>
+
+            <p>Login to the TNP Portal to view details and apply:</p>
+            <p style="text-align: center;">
+              <a href="http://localhost:5173/student/jobs" class="btn">View Jobs</a>
+            </p>
+
+            <div class="footer">
+              <p>Training & Placement Office<br>NIT Srinagar</p>
+              <p style="font-size: 11px; color: #999;">
+                This is an automated email. Please do not reply.
+              </p>
+            </div>
+          </div>
+        </div>
+      </body>
+      </html>
+    `
+  };
+
+  try {
+    await mailTransporter.sendMail(mailOptions);
+    logger.info('Individual job notification sent', { email, companyName, jobTitle });
+    return { success: true, email };
+  } catch (error) {
+    logger.error('Failed to send individual job notification', {
+      error: error.message,
+      email,
+      companyName,
+      jobTitle
+    });
+    throw error; // Throw so BullMQ can retry
+  }
+}
+
 // Don't initialize on module load - initialize on demand
 module.exports = {
   sendOTP,
   sendWelcomeEmail,
   sendJobNotificationEmail,
+  sendIndividualJobEmail,
   initEmail
 };

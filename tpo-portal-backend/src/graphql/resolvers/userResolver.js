@@ -55,7 +55,31 @@ module.exports = {
       // Validate input with CGPA (0-10) check
       const validated = validateUpdateProfile(args);
 
-      const { name, cgpa, skills, resumeUrl, reportCardUrl } = validated;
+      const {
+        name,
+        cgpa,
+        skills,
+        resumeUrl,
+        reportCardUrl,
+        mobile,
+        categoryCertificateUrl,
+        domicileUrl,
+        personalEmail
+      } = validated;
+
+      // Check if personal email is already in use by another user
+      if (personalEmail) {
+        const existingPersonalEmail = await prisma.user.findFirst({
+          where: {
+            personalEmail: personalEmail,
+            NOT: { id: user.id }
+          }
+        });
+
+        if (existingPersonalEmail) {
+          throw new Error('Personal email already in use by another account');
+        }
+      }
 
       const updated = await prisma.user.update({
         where: { id: user.id },
@@ -64,7 +88,16 @@ module.exports = {
           ...(cgpa !== undefined && { cgpa }),
           ...(skills && { skills }),
           ...(resumeUrl && { resumeUrl }),
-          ...(reportCardUrl && { reportCardUrl })
+          ...(reportCardUrl && { reportCardUrl }),
+          // New editable fields
+          ...(mobile && { mobile }),
+          ...(categoryCertificateUrl !== undefined && {
+            categoryCertificateUrl: categoryCertificateUrl || null
+          }),
+          ...(domicileUrl !== undefined && {
+            domicileUrl: domicileUrl || null
+          }),
+          ...(personalEmail && { personalEmail })
         }
       });
 

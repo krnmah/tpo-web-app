@@ -2,7 +2,74 @@ const prisma = require('../../config/prismaClient');
 const { authorize, crcCompanyCheck } = require('../../middleware/auth');
 const { validateCreateJob } = require('../../utils/validation');
 const { logApplication, logAudit, logger } = require('../../utils/logger');
+const { addBulkJobs, isQueueAvailable } = require('../../queues/emailQueue');
 const { sendJobNotificationEmail } = require('../../utils/email');
+
+/**
+ * Validate salary fields based on job type
+ * @param {Object} data - Job data with jobType and salary fields
+ * @throws {Error} - If validation fails
+ */
+function validateJobSalaryFields(data) {
+  const { jobType, stipendAmount, ppoAmount, ctcAmount } = data;
+
+  switch (jobType) {
+    case 'INTERN_ONLY':
+      if (!stipendAmount || stipendAmount <= 0) {
+        throw new Error('Stipend amount is required for intern positions');
+      }
+      break;
+
+    case 'INTERN_PPO':
+      if (!stipendAmount || stipendAmount <= 0) {
+        throw new Error('Stipend amount is required for intern positions');
+      }
+      if (!ppoAmount || ppoAmount <= 0) {
+        throw new Error('PPO amount is required for Intern + PPO positions');
+      }
+      break;
+
+    case 'INTERN_FTE':
+      if (!stipendAmount || stipendAmount <= 0) {
+        throw new Error('Stipend amount is required for intern positions');
+      }
+      if (!ctcAmount || ctcAmount <= 0) {
+        throw new Error('CTC amount is required for positions with FTE');
+      }
+      break;
+
+    case 'FTE_ONLY':
+      if (!ctcAmount || ctcAmount <= 0) {
+        throw new Error('CTC amount is required for FTE positions');
+      }
+      break;
+
+    default:
+      throw new Error(`Invalid job type: ${jobType}`);
+  }
+
+  // Clear any salary fields that don't apply to this job type
+  const cleanedData = { ...data };
+
+  switch (jobType) {
+    case 'INTERN_ONLY':
+      cleanedData.ppoAmount = null;
+      cleanedData.ctcAmount = null;
+      break;
+    case 'INTERN_PPO':
+      cleanedData.ctcAmount = null;
+      break;
+    case 'INTERN_FTE':
+      cleanedData.ppoAmount = null;
+      break;
+    case 'FTE_ONLY':
+      cleanedData.stipendAmount = null;
+      cleanedData.ppoAmount = null;
+      break;
+  }
+
+  return cleanedData;
+}
 
 module.exports = {
   Job: {
@@ -117,6 +184,9 @@ module.exports = {
       try {
         const validated = validateCreateJob(input);
 
+        // Validate salary fields based on job type
+        const salaryValidated = validateJobSalaryFields(input);
+
         // CRC can only create jobs for their assigned companies
         if (user.role === 'CRC') {
           await crcCompanyCheck(user, validated.companyId);
@@ -129,6 +199,10 @@ module.exports = {
             companyId: validated.companyId,
             minCgpa: validated.minCgpa,
             requiredSkills: validated.requiredSkills,
+            jobType: salaryValidated.jobType,
+            stipendAmount: salaryValidated.stipendAmount ? parseFloat(salaryValidated.stipendAmount) : null,
+            ppoAmount: salaryValidated.ppoAmount ? parseFloat(salaryValidated.ppoAmount) : null,
+            ctcAmount: salaryValidated.ctcAmount ? parseFloat(salaryValidated.ctcAmount) : null,
             status: validated.status || 'OPEN'
           },
           include: {
@@ -151,26 +225,64 @@ module.exports = {
             },
             select: {
               email: true,
+              name: true,
               cgpa: true
             }
           });
 
-          logger.info('Job notification - Eligible students', {
+          logger.info('Job notification - Processing eligible students', {
             jobTitle: job.title,
             minCgpa: job.minCgpa,
-            eligibleCount: eligibleStudents.length,
-            emails: eligibleStudents.map(s => s.email)
+            eligibleCount: eligibleStudents.length
           });
 
-          // Send emails to eligible students (using BCC for bulk sending)
+          // Try queue first, fall back to direct email sending
           if (eligibleStudents.length > 0) {
-            const studentEmails = eligibleStudents.map(s => s.email);
-            await sendJobNotificationEmail({
-              emails: studentEmails,
-              companyName: job.company.name,
-              jobTitle: job.title,
-              minCgpa: job.minCgpa
-            });
+            const queued = await addBulkJobs(
+              eligibleStudents.map((student) => ({
+                name: `job-notification-${student.email}`,
+                data: {
+                  type: 'JOB_NOTIFICATION_INDIVIDUAL',
+                  data: {
+                    email: student.email,
+                    studentName: student.name,
+                    companyName: job.company.name,
+                    jobTitle: job.title,
+                    minCgpa: job.minCgpa
+                  }
+                },
+                opts: {
+                  priority: 1, // Job notifications are high priority
+                }
+              }))
+            );
+
+            if (queued) {
+              logger.info('Job notification emails queued', {
+                jobTitle: job.title,
+                queuedCount: eligibleStudents.length,
+                method: 'queue'
+              });
+            } else {
+              // Fallback: Use original BCC method if queue is unavailable
+              logger.info('Queue unavailable, using fallback email method', {
+                jobTitle: job.title,
+                method: 'fallback'
+              });
+
+              const studentEmails = eligibleStudents.map(s => s.email);
+              await sendJobNotificationEmail({
+                emails: studentEmails,
+                companyName: job.company.name,
+                jobTitle: job.title,
+                minCgpa: job.minCgpa
+              });
+
+              logger.info('Job notification emails sent via fallback', {
+                jobTitle: job.title,
+                sentCount: studentEmails.length
+              });
+            }
           }
         }
 
@@ -199,9 +311,33 @@ module.exports = {
         await crcCompanyCheck(user, existing.companyId);
       }
 
+      // Merge with existing job type if not provided
+      const jobType = input.jobType || existing.jobType;
+      const dataForValidation = {
+        jobType,
+        stipendAmount: input.stipendAmount !== undefined ? input.stipendAmount : existing.stipendAmount,
+        ppoAmount: input.ppoAmount !== undefined ? input.ppoAmount : existing.ppoAmount,
+        ctcAmount: input.ctcAmount !== undefined ? input.ctcAmount : existing.ctcAmount
+      };
+
+      // Validate salary fields
+      const validatedData = validateJobSalaryFields(dataForValidation);
+
+      // Build update data
+      const updateData = {};
+      if (input.title) updateData.title = input.title;
+      if (input.description !== undefined) updateData.description = input.description;
+      if (input.minCgpa !== undefined) updateData.minCgpa = input.minCgpa;
+      if (input.requiredSkills) updateData.requiredSkills = input.requiredSkills;
+      if (input.status) updateData.status = input.status;
+      updateData.jobType = validatedData.jobType;
+      updateData.stipendAmount = validatedData.stipendAmount;
+      updateData.ppoAmount = validatedData.ppoAmount;
+      updateData.ctcAmount = validatedData.ctcAmount;
+
       const updated = await prisma.job.update({
         where: { id: parseInt(id) },
-        data: input,
+        data: updateData,
         include: {
           company: true
         }

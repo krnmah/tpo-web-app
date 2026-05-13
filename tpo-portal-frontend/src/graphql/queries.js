@@ -1,5 +1,22 @@
 import { gql } from '@apollo/client';
 
+// ==================== ENUMS ====================
+
+export const CATEGORY_ENUM = {
+  GENERAL: 'GENERAL',
+  SC: 'SC',
+  ST: 'ST',
+  OBC: 'OBC',
+  GEN_EWS: 'GEN_EWS',
+  PWD: 'PWD'
+};
+
+export const GENDER_ENUM = {
+  MALE: 'MALE',
+  FEMALE: 'FEMALE',
+  OTHER: 'OTHER'
+};
+
 // ==================== AUTH QUERIES ====================
 
 export const REGISTER_STUDENT = gql`
@@ -13,6 +30,12 @@ export const REGISTER_STUDENT = gql`
     $skills: [String!]!
     $resumeUrl: String!
     $reportCardUrl: String!
+    $mobile: String!
+    $category: Category!
+    $categoryCertificateUrl: String
+    $domicileUrl: String
+    $personalEmail: String!
+    $gender: Gender!
   ) {
     registerStudent(
       name: $name
@@ -24,6 +47,12 @@ export const REGISTER_STUDENT = gql`
       skills: $skills
       resumeUrl: $resumeUrl
       reportCardUrl: $reportCardUrl
+      mobile: $mobile
+      category: $category
+      categoryCertificateUrl: $categoryCertificateUrl
+      domicileUrl: $domicileUrl
+      personalEmail: $personalEmail
+      gender: $gender
     ) {
       token
       user {
@@ -37,6 +66,12 @@ export const REGISTER_STUDENT = gql`
         skills
         resumeUrl
         reportCardUrl
+        mobile
+        category
+        categoryCertificateUrl
+        domicileUrl
+        personalEmail
+        gender
       }
     }
   }
@@ -57,6 +92,12 @@ export const LOGIN = gql`
         skills
         resumeUrl
         reportCardUrl
+        mobile
+        category
+        categoryCertificateUrl
+        domicileUrl
+        personalEmail
+        gender
       }
     }
   }
@@ -98,9 +139,17 @@ export const GET_ME = gql`
       role
       name
       enrollmentNumber
+      branch
       cgpa
       skills
       resumeUrl
+      reportCardUrl
+      mobile
+      category
+      categoryCertificateUrl
+      domicileUrl
+      personalEmail
+      gender
       createdAt
       updatedAt
     }
@@ -134,8 +183,22 @@ export const UPDATE_PROFILE = gql`
     $skills: [String!]
     $resumeUrl: String
     $reportCardUrl: String
+    $mobile: String
+    $categoryCertificateUrl: String
+    $domicileUrl: String
+    $personalEmail: String
   ) {
-    updateProfile(name: $name, cgpa: $cgpa, skills: $skills, resumeUrl: $resumeUrl, reportCardUrl: $reportCardUrl) {
+    updateProfile(
+      name: $name
+      cgpa: $cgpa
+      skills: $skills
+      resumeUrl: $resumeUrl
+      reportCardUrl: $reportCardUrl
+      mobile: $mobile
+      categoryCertificateUrl: $categoryCertificateUrl
+      domicileUrl: $domicileUrl
+      personalEmail: $personalEmail
+    ) {
       id
       email
       role
@@ -146,6 +209,12 @@ export const UPDATE_PROFILE = gql`
       skills
       resumeUrl
       reportCardUrl
+      mobile
+      category
+      categoryCertificateUrl
+      domicileUrl
+      personalEmail
+      gender
       createdAt
       updatedAt
     }
@@ -316,6 +385,10 @@ export const GET_JOBS = gql`
       minCgpa
       requiredSkills
       status
+      jobType
+      stipendAmount
+      ppoAmount
+      ctcAmount
       createdAt
       updatedAt
       _applicationCount
@@ -359,6 +432,10 @@ export const GET_ELIGIBLE_JOBS = gql`
       minCgpa
       requiredSkills
       status
+      jobType
+      stipendAmount
+      ppoAmount
+      ctcAmount
       createdAt
       _applicationCount
     }
@@ -378,6 +455,10 @@ export const CREATE_JOB = gql`
       minCgpa
       requiredSkills
       status
+      jobType
+      stipendAmount
+      ppoAmount
+      ctcAmount
       createdAt
     }
   }
@@ -396,6 +477,10 @@ export const UPDATE_JOB = gql`
       minCgpa
       requiredSkills
       status
+      jobType
+      stipendAmount
+      ppoAmount
+      ctcAmount
       createdAt
     }
   }

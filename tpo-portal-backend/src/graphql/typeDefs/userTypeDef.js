@@ -5,6 +5,21 @@ enum Role {
   CRC
 }
 
+enum Category {
+  GENERAL
+  SC
+  ST
+  OBC
+  GEN_EWS
+  PWD
+}
+
+enum Gender {
+  MALE
+  FEMALE
+  OTHER
+}
+
 type User {
   id: ID!
   email: String!
@@ -16,6 +31,12 @@ type User {
   skills: [String!]!
   resumeUrl: String
   reportCardUrl: String
+  mobile: String
+  category: Category
+  categoryCertificateUrl: String
+  domicileUrl: String
+  personalEmail: String
+  gender: Gender
   createdAt: String!
   updatedAt: String!
 }
@@ -31,6 +52,12 @@ type UserResponse {
   skills: [String!]!
   resumeUrl: String
   reportCardUrl: String
+  mobile: String
+  category: Category
+  categoryCertificateUrl: String
+  domicileUrl: String
+  personalEmail: String
+  gender: Gender
   createdAt: String!
   updatedAt: String!
 }
@@ -45,6 +72,12 @@ input CreateUserInput {
   skills: [String!]!
   resumeUrl: String!
   reportCardUrl: String!
+  mobile: String!
+  category: Category!
+  categoryCertificateUrl: String
+  domicileUrl: String
+  personalEmail: String!
+  gender: Gender!
 }
 
 input UpdateUserInput {
@@ -53,6 +86,10 @@ input UpdateUserInput {
   skills: [String!]
   resumeUrl: String
   reportCardUrl: String
+  mobile: String
+  categoryCertificateUrl: String
+  domicileUrl: String
+  personalEmail: String
 }
 
 extend type Query {
@@ -69,6 +106,10 @@ extend type Mutation {
     skills: [String!]
     resumeUrl: String
     reportCardUrl: String
+    mobile: String
+    categoryCertificateUrl: String
+    domicileUrl: String
+    personalEmail: String
   ): UserResponse!
 
   # Change password

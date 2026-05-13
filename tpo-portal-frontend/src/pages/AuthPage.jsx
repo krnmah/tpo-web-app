@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams, Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-import { REGISTER_STUDENT, SEND_PASSWORD_RESET_OTP, VERIFY_OTP_AND_RESET_PASSWORD, SEND_EMAIL_VERIFICATION_OTP, VERIFY_EMAIL_OTP } from "../graphql/queries";
+import { REGISTER_STUDENT, SEND_PASSWORD_RESET_OTP, VERIFY_OTP_AND_RESET_PASSWORD, SEND_EMAIL_VERIFICATION_OTP, VERIFY_EMAIL_OTP, CATEGORY_ENUM, GENDER_ENUM } from "../graphql/queries";
 import { useMutation } from "@apollo/client";
 import nitsLogo from "../assets/nitslogo.png";
 import ParticleBackground from "../components/ParticleBackground";
@@ -46,6 +46,41 @@ const CloseIcon = () => (
     <line x1="6" y1="6" x2="18" y2="18" />
   </svg>
 );
+
+const CheckIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+    <polyline points="20 6 9 17 4 12" />
+  </svg>
+);
+
+const XIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+    <line x1="18" y1="6" x2="6" y2="18" />
+    <line x1="6" y1="6" x2="18" y2="18" />
+  </svg>
+);
+
+// Password validation - returns individual requirements with their status
+const getPasswordRequirements = (password) => {
+  return [
+    {
+      text: "At least 8 characters",
+      met: password.length >= 8
+    },
+    {
+      text: "1 uppercase letter",
+      met: /[A-Z]/.test(password)
+    },
+    {
+      text: "1 number",
+      met: /[0-9]/.test(password)
+    },
+    {
+      text: "1 special character",
+      met: /[^a-zA-Z0-9]/.test(password)
+    }
+  ];
+};
 
 // Password validation
 const validateStrongPassword = (password) => {
@@ -103,6 +138,25 @@ const createValidators = () => ({
   reportCardUrl: (value) => {
     if (!value) return "Report card URL is required";
     return null;
+  },
+  // New field validators
+  mobile: (value) => {
+    const mobileRegex = /^[6-9]\d{9}$/;
+    if (!value || !mobileRegex.test(value.trim())) {
+      return "Mobile number must be 10 digits starting with 6-9";
+    }
+    return null;
+  },
+  personalEmail: (value) => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!value || !emailRegex.test(value.trim())) {
+      return "Please enter a valid personal email address";
+    }
+    return null;
+  },
+  gender: (value) => {
+    if (!value || value.trim() === "") return "Please select your gender";
+    return null;
   }
 });
 
@@ -147,7 +201,14 @@ const AuthPage = () => {
     branch: "",
     cgpa: "",
     resumeUrl: "",
-    reportCardUrl: ""
+    reportCardUrl: "",
+    // New fields
+    mobile: "",
+    category: "GENERAL",
+    categoryCertificateUrl: "",
+    domicileUrl: "",
+    personalEmail: "",
+    gender: ""
   });
 
   const branches = [
@@ -198,7 +259,14 @@ const AuthPage = () => {
         branch: "",
         cgpa: "",
         resumeUrl: "",
-        reportCardUrl: ""
+        reportCardUrl: "",
+        // New fields
+        mobile: "",
+        category: "GENERAL",
+        categoryCertificateUrl: "",
+        domicileUrl: "",
+        personalEmail: "",
+        gender: ""
       });
     }
   };
@@ -413,12 +481,23 @@ const AuthPage = () => {
       validate.password(signupData.password),
       validate.confirmPassword(signupData.confirmPassword, signupData),
       validate.resumeUrl(signupData.resumeUrl),
-      validate.reportCardUrl(signupData.reportCardUrl)
+      validate.reportCardUrl(signupData.reportCardUrl),
+      // New fields validation
+      validate.mobile(signupData.mobile),
+      validate.personalEmail(signupData.personalEmail),
+      validate.gender(signupData.gender)
     ];
 
     const firstError = validations.find(err => err !== null);
     if (firstError) {
       setError(firstError);
+      setLoading(false);
+      return;
+    }
+
+    // Conditional validation: category certificate required if category !== GENERAL
+    if (signupData.category !== "GENERAL" && (!signupData.categoryCertificateUrl || signupData.categoryCertificateUrl.trim() === "")) {
+      setError("Category certificate URL is required for your category");
       setLoading(false);
       return;
     }
@@ -434,7 +513,14 @@ const AuthPage = () => {
           cgpa: parseFloat(signupData.cgpa),
           skills: [],
           resumeUrl: signupData.resumeUrl.trim(),
-          reportCardUrl: signupData.reportCardUrl.trim()
+          reportCardUrl: signupData.reportCardUrl.trim(),
+          // New fields
+          mobile: signupData.mobile.trim(),
+          category: signupData.category,
+          categoryCertificateUrl: signupData.categoryCertificateUrl.trim() || null,
+          domicileUrl: signupData.domicileUrl.trim() || null,
+          personalEmail: signupData.personalEmail.trim(),
+          gender: signupData.gender
         }
       });
 
@@ -972,7 +1058,7 @@ const AuthPage = () => {
                           className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-slate-900 transition-all duration-200 text-sm bg-white placeholder:text-slate-400"
                           required
                         >
-                          <option value="" disabled selected>Select your branch</option>
+                          <option value="" disabled>Select your branch</option>
                           {branches.map((branch) => (
                             <option key={branch} value={branch}>
                               {branch}
@@ -1022,6 +1108,21 @@ const AuthPage = () => {
                             {showPassword ? <EyeOffIcon /> : <EyeIcon />}
                           </button>
                         </div>
+                        {/* Password Strength Indicator */}
+                        {signupData.password && (
+                          <div className="mt-2 space-y-1">
+                            {getPasswordRequirements(signupData.password).map((req, index) => (
+                              <div key={index} className="flex items-center gap-2 text-xs">
+                                <span className={req.met ? "text-green-600" : "text-red-500"}>
+                                  {req.met ? <CheckIcon /> : <XIcon />}
+                                </span>
+                                <span className={req.met ? "text-green-700" : "text-red-600"}>
+                                  {req.text}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
                       </div>
 
                       <div>
@@ -1047,11 +1148,24 @@ const AuthPage = () => {
                             {showConfirmPassword ? <EyeOffIcon /> : <EyeIcon />}
                           </button>
                         </div>
+                        {/* Password Match Indicator */}
+                        {signupData.confirmPassword && (
+                          <div className="mt-2 flex items-center gap-2 text-xs">
+                            <span className={signupData.password === signupData.confirmPassword && signupData.password !== "" ? "text-green-600" : "text-red-500"}>
+                              {signupData.password === signupData.confirmPassword && signupData.password !== "" ? <CheckIcon /> : <XIcon />}
+                            </span>
+                            <span className={signupData.password === signupData.confirmPassword && signupData.password !== "" ? "text-green-700 font-medium" : "text-red-600 font-medium"}>
+                              {signupData.password === signupData.confirmPassword && signupData.password !== ""
+                                ? "Passwords matched"
+                                : "Passwords do not match"}
+                            </span>
+                          </div>
+                        )}
                       </div>
 
                       <div>
                         <label htmlFor="signup-resume" className="block text-sm font-medium text-slate-900 mb-1.5">
-                          Resume Link (Google Drive)
+                          Resume Link 
                         </label>
                         <input
                           id="signup-resume"
@@ -1066,7 +1180,7 @@ const AuthPage = () => {
 
                       <div>
                         <label htmlFor="signup-report" className="block text-sm font-medium text-slate-900 mb-1.5">
-                          Report Card Link (Google Drive)
+                          Report Card Link 
                         </label>
                         <input
                           id="signup-report"
@@ -1077,6 +1191,111 @@ const AuthPage = () => {
                           className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-slate-900 transition-all duration-200 text-sm placeholder:text-slate-400"
                           required
                         />
+                      </div>
+
+                      {/* Mobile Number */}
+                      <div>
+                        <label htmlFor="signup-mobile" className="block text-sm font-medium text-slate-900 mb-1.5">
+                          Mobile Number
+                        </label>
+                        <input
+                          id="signup-mobile"
+                          type="tel"
+                          placeholder="10-digit mobile number"
+                          value={signupData.mobile}
+                          onChange={(e) => setSignupData({ ...signupData, mobile: e.target.value.replace(/\D/g, '').slice(0, 10) })}
+                          className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-slate-900 transition-all duration-200 text-sm placeholder:text-slate-400"
+                          required
+                        />
+                      </div>
+
+                      {/* Category Dropdown */}
+                      <div>
+                        <label htmlFor="signup-category" className="block text-sm font-medium text-slate-900 mb-1.5">
+                          Category
+                        </label>
+                        <select
+                          id="signup-category"
+                          value={signupData.category}
+                          onChange={(e) => setSignupData({ ...signupData, category: e.target.value })}
+                          className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-slate-900 transition-all duration-200 text-sm bg-white"
+                          required
+                        >
+                          <option value="GENERAL">General</option>
+                          <option value="SC">SC</option>
+                          <option value="ST">ST</option>
+                          <option value="OBC">OBC</option>
+                          <option value="GEN_EWS">Gen-EWS</option>
+                          <option value="PWD">PWD</option>
+                        </select>
+                      </div>
+
+                      {/* Category Certificate URL (conditional) */}
+                      {signupData.category !== "GENERAL" && (
+                        <div>
+                          <label htmlFor="signup-category-cert" className="block text-sm font-medium text-slate-900 mb-1.5">
+                            Category Certificate Link *
+                          </label>
+                          <input
+                            id="signup-category-cert"
+                            type="url"
+                            placeholder="Paste your category certificate Google Drive link"
+                            value={signupData.categoryCertificateUrl}
+                            onChange={(e) => setSignupData({ ...signupData, categoryCertificateUrl: e.target.value })}
+                            className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-slate-900 transition-all duration-200 text-sm placeholder:text-slate-400"
+                            required={signupData.category !== "GENERAL"}
+                          />
+                        </div>
+                      )}
+
+                      {/* Domicile Certificate URL (optional) */}
+                      <div>
+                        <label htmlFor="signup-domicile" className="block text-sm font-medium text-slate-900 mb-1.5">
+                          Domicile Certificate Link (Optional)
+                        </label>
+                        <input
+                          id="signup-domicile"
+                          type="url"
+                          placeholder="Paste your domicile certificate Google Drive link"
+                          value={signupData.domicileUrl}
+                          onChange={(e) => setSignupData({ ...signupData, domicileUrl: e.target.value })}
+                          className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-slate-900 transition-all duration-200 text-sm placeholder:text-slate-400"
+                        />
+                      </div>
+
+                      {/* Personal Email */}
+                      <div>
+                        <label htmlFor="signup-personal-email" className="block text-sm font-medium text-slate-900 mb-1.5">
+                          Personal Email
+                        </label>
+                        <input
+                          id="signup-personal-email"
+                          type="email"
+                          placeholder="your.email@gmail.com"
+                          value={signupData.personalEmail}
+                          onChange={(e) => setSignupData({ ...signupData, personalEmail: e.target.value })}
+                          className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-slate-900 transition-all duration-200 text-sm placeholder:text-slate-400"
+                          required
+                        />
+                      </div>
+
+                      {/* Gender Dropdown */}
+                      <div>
+                        <label htmlFor="signup-gender" className="block text-sm font-medium text-slate-900 mb-1.5">
+                          Gender
+                        </label>
+                        <select
+                          id="signup-gender"
+                          value={signupData.gender}
+                          onChange={(e) => setSignupData({ ...signupData, gender: e.target.value })}
+                          className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-slate-900 transition-all duration-200 text-sm bg-white"
+                          required
+                        >
+                          <option value="">Select Gender</option>
+                          <option value="MALE">Male</option>
+                          <option value="FEMALE">Female</option>
+                          <option value="OTHER">Other</option>
+                        </select>
                       </div>
 
                       <button
