@@ -7,6 +7,21 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum Category {
+  GENERAL
+  SC
+  ST
+  OBC
+  GEN_EWS
+  PWD
+}
+
+enum Gender {
+  MALE
+  FEMALE
+  OTHER
+}
+
 enum Role {
   ADMIN
   STUDENT
@@ -18,6 +33,13 @@ enum ApplicationStatus {
   SHORTLISTED
   REJECTED
   SELECTED
+}
+
+enum JobType {
+  INTERN_ONLY
+  INTERN_PPO
+  INTERN_FTE
+  FTE_ONLY
 }
 
 enum JobStatus {
@@ -36,8 +58,14 @@ model User {
   cgpa             Float?
   skills           String[]
   resumeUrl        String?
-  reportCardUrl    String?
-  createdAt        DateTime  @default(now())
+  reportCardUrl          String?
+  mobile                 String?
+  category               Category   @default(GENERAL)
+  categoryCertificateUrl String?
+  domicileUrl            String?
+  personalEmail          String?    @unique
+  gender                 Gender?
+  createdAt              DateTime   @default(now())
   updatedAt        DateTime  @updatedAt
 
   @@index([email])
@@ -69,6 +97,10 @@ model Job {
   minCgpa        Float
   requiredSkills String[]
   status         JobStatus  @default(OPEN)
+  jobType        JobType    @default(INTERN_ONLY)
+  stipendAmount  Float?
+  ppoAmount      Float?
+  ctcAmount      Float?
   createdAt      DateTime   @default(now())
   updatedAt      DateTime   @updatedAt
 
