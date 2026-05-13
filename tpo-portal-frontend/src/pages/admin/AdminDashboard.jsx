@@ -112,18 +112,41 @@ const AdminDashboard = () => {
 
   const handleAssignCRC = async () => {
     if (!crcEmail.endsWith("@nitsri.ac.in")) {
-      alert("Please use a valid @nitsri.ac.in email");
+      setToast({ show: true, message: 'Please use a valid @nitsri.ac.in email', type: 'error' });
+      setTimeout(() => setToast({ ...toast, show: false }), 3000);
       return;
     }
     try {
-      await assignCRC({ variables: { email: crcEmail } });
-      alert("CRC assigned successfully!");
+      const result = await assignCRC({ variables: { email: crcEmail } });
+
+      // Check for GraphQL errors in the response
+      if (result.errors && result.errors.length > 0) {
+        const errorMessage = result.errors[0].message;
+        const errorLower = errorMessage.toLowerCase();
+
+        if (errorLower.includes('user not found') || errorLower.includes('student not found')) {
+          setToast({
+            show: true,
+            message: `Student with email "${crcEmail}" not found in the system`,
+            type: 'error'
+          });
+        } else {
+          setToast({ show: true, message: errorMessage, type: 'error' });
+        }
+        setTimeout(() => setToast({ ...toast, show: false }), 3000);
+        return;
+      }
+
+      // Success case
+      setToast({ show: true, message: 'CRC assigned successfully!', type: 'success' });
       setCrcEmail("");
       setShowCRCForm(false);
       refetchStats();
       refetchStudents();
+      setTimeout(() => setToast({ ...toast, show: false }), 3000);
     } catch (err) {
-      alert(err.message);
+      setToast({ show: true, message: err.message || 'Failed to assign CRC', type: 'error' });
+      setTimeout(() => setToast({ ...toast, show: false }), 3000);
     }
   };
 
@@ -132,9 +155,12 @@ const AdminDashboard = () => {
     if (confirmed) {
       try {
         await removeCRC({ variables: { email } });
+        setToast({ show: true, message: 'CRC role removed successfully!', type: 'success' });
         refetchStudents();
+        setTimeout(() => setToast({ ...toast, show: false }), 3000);
       } catch (err) {
-        alert(err.message);
+        setToast({ show: true, message: err.message, type: 'error' });
+        setTimeout(() => setToast({ ...toast, show: false }), 3000);
       }
     }
   };
@@ -1036,19 +1062,40 @@ const AdminDashboard = () => {
       {/* Toast Notification */}
       {toast.show && (
         <div className="fixed bottom-6 right-6 z-50 animate-slide-up">
-          <div className={`flex items-center gap-3 px-5 py-4 rounded-xl shadow-2xl ${
-            toast.type === 'success'
-              ? 'bg-gradient-to-r from-green-500 to-emerald-500'
-              : 'bg-gradient-to-r from-red-500 to-rose-500'
-          }`}>
-            <div className="p-1.5 bg-white/20 rounded-lg">
+          <div className="flex items-center gap-3 bg-white rounded-xl shadow-lg border border-gray-100 px-4 py-3 min-w-[320px]">
+            <div className={`p-2 rounded-lg ${
+              toast.type === 'success'
+                ? 'bg-emerald-50'
+                : 'bg-red-50'
+            }`}>
               {toast.type === 'success' ? (
-                <Check className="w-5 h-5 text-white" />
+                <Check className="w-5 h-5 text-emerald-600" />
               ) : (
-                <X className="w-5 h-5 text-white" />
+                <X className="w-5 h-5 text-red-500" />
               )}
             </div>
-            <span className="text-sm font-medium text-white">{toast.message}</span>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-semibold text-gray-900">
+                {toast.type === 'success' ? 'Success' : 'Error'}
+              </p>
+              <p className="text-xs text-gray-500 truncate">{toast.message}</p>
+            </div>
+            <button
+              onClick={() => setToast({ ...toast, show: false })}
+              className="p-1 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer"
+            >
+              <X className="w-4 h-4 text-gray-400" />
+            </button>
+          </div>
+
+          {/* Progress bar */}
+          <div className="absolute bottom-0 left-0 right-0 h-1 bg-gray-100 rounded-b-xl overflow-hidden">
+            <div
+              className={`h-full ${toast.type === 'success' ? 'bg-emerald-500' : 'bg-red-500'}`}
+              style={{
+                animation: 'toastProgress 3s linear forwards'
+              }}
+            />
           </div>
         </div>
       )}

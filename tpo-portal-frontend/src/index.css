@@ -39,3 +39,9 @@
 .animate-slide-up {
   animation: slide-up 0.3s ease-out;
 }
+
+/* Toast Progress Bar Animation */
+@keyframes toastProgress {
+  from { width: 100%; }
+  to { width: 0%; }
+}
