@@ -352,10 +352,6 @@ const AdminDashboard = () => {
                 <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
                 <p className="text-sm text-gray-500 mt-1">Training & Placement Department · NIT Srinagar</p>
               </div>
-              <div className="flex items-center gap-2 px-4 py-2 bg-white rounded-lg shadow-sm border border-gray-100">
-                <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-                <span className="text-sm font-medium text-gray-700">System Active</span>
-              </div>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">

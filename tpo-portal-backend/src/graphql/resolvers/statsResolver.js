@@ -7,7 +7,7 @@ module.exports = {
       authorize(user, ['ADMIN', 'CRC', 'STUDENT']);
 
       const totalStudents = await prisma.user.count({
-        where: { role: 'STUDENT' }
+        where: { role: { in: ['STUDENT', 'CRC'] } }
       });
 
       // Count placed students (those with SELECTED status applications)
@@ -32,7 +32,7 @@ module.exports = {
       authorize(user, ['ADMIN', 'CRC', 'STUDENT']);
 
       const totalStudents = await prisma.user.count({
-        where: { role: 'STUDENT' }
+        where: { role: { in: ['STUDENT', 'CRC'] } }
       });
 
       const totalCompanies = await prisma.company.count();

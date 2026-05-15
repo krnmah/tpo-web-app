@@ -1,7 +1,7 @@
 const { Worker } = require('bullmq');
 const Redis = require('ioredis');
 const { sendJobNotificationEmail, sendIndividualJobEmail } = require('../utils/email');
-const logger = require('../utils/logger');
+const {logger} = require('../utils/logger');
 
 let worker = null;
 let connection = null;
