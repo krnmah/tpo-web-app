@@ -8,6 +8,7 @@ import { GET_JOBS, CREATE_JOB, CLOSE_JOB, UPDATE_JOB, DELETE_JOB } from "../../g
 import { GET_APPLICATIONS_BY_COMPANY, UPDATE_APPLICATION_STATUS } from "../../graphql/queries";
 import { CREATE_MY_COMPANY } from "../../graphql/queries";
 import { getSalaryDisplay, getRequiredFields, validateSalaryFields } from "../../utils/formatCurrency";
+import * as XLSX from "xlsx";
 import {
   LayoutDashboard,
   Building2,
@@ -51,10 +52,10 @@ const CRCDashboard = () => {
   };
 
   // Queries
-  const { data: companiesData, refetch: refetchCompanies, error: companiesError } = useQuery(GET_MY_ASSIGNED_COMPANIES, {
+  const { data: companiesData, refetch: refetchCompanies } = useQuery(GET_MY_ASSIGNED_COMPANIES, {
     fetchPolicy: "network-only"
   });
-  const { data: allJobsData, refetch: refetchJobs, error: jobsError } = useQuery(GET_JOBS, {
+  const { data: allJobsData, refetch: refetchJobs } = useQuery(GET_JOBS, {
     fetchPolicy: "network-only"
   });
 
@@ -958,12 +959,137 @@ const CRCDashboard = () => {
   );
 };
 
+const StudentDetailModal = ({ student, onClose }) => {
+  if (!student) return null;
+
+  const documentLinks = [
+    { label: "Resume", url: student.resumeUrl, icon: "📄" },
+    { label: "Report Card", url: student.reportCardUrl, icon: "📊" },
+    { label: "Category Certificate", url: student.categoryCertificateUrl, icon: "📑" },
+    { label: "Domicile Certificate", url: student.domicileUrl, icon: "🏠" },
+  ];
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose}></div>
+      <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+        {/* Header */}
+        <div className="sticky top-0 bg-white border-b border-zinc-100 px-6 py-4 flex items-center justify-between z-10">
+          <div>
+            <h2 className="text-lg font-semibold text-zinc-900">Student Details</h2>
+            <p className="text-sm text-zinc-500">{student.name}</p>
+          </div>
+          <button
+            onClick={onClose}
+            className="p-2 text-zinc-400 hover:text-zinc-600 hover:bg-zinc-100 rounded-lg transition-colors"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        {/* Content */}
+        <div className="p-6 space-y-6">
+          {/* Personal Info */}
+          <div>
+            <h3 className="text-sm font-semibold text-zinc-900 mb-3">Personal Information</h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="bg-zinc-50 rounded-lg p-3">
+                <p className="text-xs text-zinc-500 mb-1">Full Name</p>
+                <p className="text-sm font-medium text-zinc-900">{student.name}</p>
+              </div>
+              <div className="bg-zinc-50 rounded-lg p-3">
+                <p className="text-xs text-zinc-500 mb-1">Email</p>
+                <p className="text-sm font-medium text-zinc-900">{student.email}</p>
+              </div>
+              <div className="bg-zinc-50 rounded-lg p-3">
+                <p className="text-xs text-zinc-500 mb-1">Personal Email</p>
+                <p className="text-sm font-medium text-zinc-900">{student.personalEmail || "N/A"}</p>
+              </div>
+              <div className="bg-zinc-50 rounded-lg p-3">
+                <p className="text-xs text-zinc-500 mb-1">Mobile</p>
+                <p className="text-sm font-medium text-zinc-900">{student.mobile || "N/A"}</p>
+              </div>
+              <div className="bg-zinc-50 rounded-lg p-3">
+                <p className="text-xs text-zinc-500 mb-1">Enrollment Number</p>
+                <p className="text-sm font-medium text-zinc-900 font-mono">{student.enrollmentNumber || "N/A"}</p>
+              </div>
+              <div className="bg-zinc-50 rounded-lg p-3">
+                <p className="text-xs text-zinc-500 mb-1">Branch</p>
+                <p className="text-sm font-medium text-zinc-900">{student.branch || "N/A"}</p>
+              </div>
+              <div className="bg-zinc-50 rounded-lg p-3">
+                <p className="text-xs text-zinc-500 mb-1">CGPA</p>
+                <p className="text-sm font-medium text-zinc-900">{student.cgpa || "N/A"}</p>
+              </div>
+              <div className="bg-zinc-50 rounded-lg p-3">
+                <p className="text-xs text-zinc-500 mb-1">Category</p>
+                <p className="text-sm font-medium text-zinc-900">{student.category || "N/A"}</p>
+              </div>
+              <div className="bg-zinc-50 rounded-lg p-3">
+                <p className="text-xs text-zinc-500 mb-1">Gender</p>
+                <p className="text-sm font-medium text-zinc-900">{student.gender || "N/A"}</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Skills */}
+          {student.skills && student.skills.length > 0 && (
+            <div>
+              <h3 className="text-sm font-semibold text-zinc-900 mb-3">Skills</h3>
+              <div className="flex flex-wrap gap-2">
+                {student.skills.map((skill, index) => (
+                  <span key={index} className="px-2.5 py-1 bg-indigo-50 text-indigo-700 text-xs font-medium rounded-lg">
+                    {skill}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Documents */}
+          <div>
+            <h3 className="text-sm font-semibold text-zinc-900 mb-3">Documents</h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {documentLinks.map((doc) => (
+                doc.url ? (
+                  <a
+                    key={doc.label}
+                    href={doc.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-3 p-3 bg-zinc-50 rounded-lg hover:bg-zinc-100 transition-colors group"
+                  >
+                    <span className="text-lg">{doc.icon}</span>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-zinc-900 group-hover:text-indigo-600 transition-colors">{doc.label}</p>
+                      <p className="text-xs text-zinc-500 truncate">View document</p>
+                    </div>
+                  </a>
+                ) : (
+                  <div key={doc.label} className="flex items-center gap-3 p-3 bg-zinc-50 rounded-lg opacity-60">
+                    <span className="text-lg">{doc.icon}</span>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-zinc-400">{doc.label}</p>
+                      <p className="text-xs text-zinc-400">Not uploaded</p>
+                    </div>
+                  </div>
+                )
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const CompanyApplications = ({ companyId, updateApplicationStatus }) => {
-  const { data, refetch, error: applicationsError } = useQuery(GET_APPLICATIONS_BY_COMPANY, {
+  const { data, refetch } = useQuery(GET_APPLICATIONS_BY_COMPANY, {
     variables: { companyId },
     fetchPolicy: "network-only"
   });
   const applications = data?.applicationsByCompany || [];
+  const [selectedStudent, setSelectedStudent] = useState(null);
 
   const handleStatusChange = async (applicationId, status) => {
     try {
@@ -984,58 +1110,120 @@ const CompanyApplications = ({ companyId, updateApplicationStatus }) => {
     return styles[status] || styles.APPLIED;
   };
 
+  const exportToExcel = () => {
+    if (applications.length === 0) {
+      alert("No applications to export");
+      return;
+    }
+
+    const companyName = applications[0]?.company?.name || "Company";
+    
+    const data = applications.map((app) => ({
+      "Student Name": app.student?.name || "",
+      "Email": app.student?.email || "",
+      "Personal Email": app.student?.personalEmail || "",
+      "Mobile": app.student?.mobile || "",
+      "Enrollment Number": app.student?.enrollmentNumber || "",
+      "Branch": app.student?.branch || "",
+      "CGPA": app.student?.cgpa || "",
+      "Category": app.student?.category || "",
+      "Gender": app.student?.gender || "",
+      "Job Title": app.job?.title || "",
+      "Resume URL": app.student?.resumeUrl || "",
+      "Report Card URL": app.student?.reportCardUrl || "",
+      "Category Certificate URL": app.student?.categoryCertificateUrl || "",
+      "Domicile Certificate URL": app.student?.domicileUrl || "",
+    }));
+
+    const ws = XLSX.utils.json_to_sheet(data);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Applications");
+    
+    const fileName = `${companyName.replace(/[^a-zA-Z0-9]/g, "_")}_applications.xlsx`;
+    XLSX.writeFile(wb, fileName);
+  };
+
   return (
-    <div className="bg-white border border-zinc-100 rounded-xl overflow-hidden">
-      <div className="px-5 py-4 border-b border-zinc-100">
-        <h3 className="text-sm font-semibold text-zinc-900">Applications</h3>
-      </div>
-      <div className="overflow-x-auto">
-        <table className="w-full">
-          <thead className="bg-zinc-50">
-            <tr>
-              <th className="px-5 py-3 text-left text-xs font-medium text-zinc-500 uppercase">Student</th>
-              <th className="px-5 py-3 text-left text-xs font-medium text-zinc-500 uppercase">Enrollment</th>
-              <th className="px-5 py-3 text-left text-xs font-medium text-zinc-500 uppercase">CGPA</th>
-              <th className="px-5 py-3 text-left text-xs font-medium text-zinc-500 uppercase">Status</th>
-              <th className="px-5 py-3 text-left text-xs font-medium text-zinc-500 uppercase">Action</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-zinc-100">
-            {applications.map((app) => (
-              <tr key={app.id} className="hover:bg-zinc-50">
-                <td className="px-5 py-4 text-sm font-medium text-zinc-900">{app.student?.name}</td>
-                <td className="px-5 py-4 text-sm text-zinc-500 font-mono">{app.student?.enrollmentNumber}</td>
-                <td className="px-5 py-4 text-sm text-zinc-700">{app.student?.cgpa}</td>
-                <td className="px-5 py-4">
-                  <span className={`px-2.5 py-1 text-xs font-medium rounded-lg border ${getStatusBadge(app.status)}`}>
-                    {app.status}
-                  </span>
-                </td>
-                <td className="px-5 py-4">
-                  <select
-                    value={app.status}
-                    onChange={(e) => handleStatusChange(app.id, e.target.value)}
-                    className="px-3 py-1.5 border border-zinc-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-zinc-900 bg-white"
-                  >
-                    <option value="APPLIED">Applied</option>
-                    <option value="SHORTLISTED">Shortlist</option>
-                    <option value="SELECTED">Select</option>
-                    <option value="REJECTED">Reject</option>
-                  </select>
-                </td>
-              </tr>
-            ))}
-            {applications.length === 0 && (
+    <>
+      <div className="bg-white border border-zinc-100 rounded-xl overflow-hidden">
+        <div className="px-5 py-4 border-b border-zinc-100 flex items-center justify-between">
+          <h3 className="text-sm font-semibold text-zinc-900">Applications</h3>
+          {applications.length > 0 && (
+            <button
+              onClick={exportToExcel}
+              className="flex items-center gap-2 px-3 py-1.5 bg-emerald-50 text-emerald-700 text-xs font-medium rounded-lg hover:bg-emerald-100 transition-colors"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                <polyline points="7 10 12 15 17 10"/>
+                <line x1="12" y1="15" x2="12" y2="3"/>
+              </svg>
+              Export to Excel
+            </button>
+          )}
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead className="bg-zinc-50">
               <tr>
-                <td colSpan="5" className="px-5 py-8 text-center text-sm text-zinc-500">
-                  No applications yet
-                </td>
+                <th className="px-5 py-3 text-left text-xs font-medium text-zinc-500 uppercase">Student</th>
+                <th className="px-5 py-3 text-left text-xs font-medium text-zinc-500 uppercase">Enrollment</th>
+                <th className="px-5 py-3 text-left text-xs font-medium text-zinc-500 uppercase">CGPA</th>
+                <th className="px-5 py-3 text-left text-xs font-medium text-zinc-500 uppercase">Status</th>
+                <th className="px-5 py-3 text-left text-xs font-medium text-zinc-500 uppercase">Action</th>
               </tr>
-            )}
-          </tbody>
-        </table>
+            </thead>
+            <tbody className="divide-y divide-zinc-100">
+              {applications.map((app) => (
+                <tr key={app.id} className="hover:bg-zinc-50">
+                  <td className="px-5 py-4">
+                    <button
+                      onClick={() => setSelectedStudent(app.student)}
+                      className="text-sm font-medium text-zinc-900 hover:text-zinc-700 hover:underline transition-colors text-left"
+                    >
+                      {app.student?.name}
+                    </button>
+                  </td>
+                  <td className="px-5 py-4 text-sm text-zinc-500 font-mono">{app.student?.enrollmentNumber}</td>
+                  <td className="px-5 py-4 text-sm text-zinc-700">{app.student?.cgpa}</td>
+                  <td className="px-5 py-4">
+                    <span className={`px-2.5 py-1 text-xs font-medium rounded-lg border ${getStatusBadge(app.status)}`}>
+                      {app.status}
+                    </span>
+                  </td>
+                  <td className="px-5 py-4">
+                    <select
+                      value={app.status}
+                      onChange={(e) => handleStatusChange(app.id, e.target.value)}
+                      className="px-3 py-1.5 border border-zinc-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-zinc-900 bg-white"
+                    >
+                      <option value="APPLIED">Applied</option>
+                      <option value="SHORTLISTED">Shortlist</option>
+                      <option value="SELECTED">Select</option>
+                      <option value="REJECTED">Reject</option>
+                    </select>
+                  </td>
+                </tr>
+              ))}
+              {applications.length === 0 && (
+                <tr>
+                  <td colSpan="5" className="px-5 py-8 text-center text-sm text-zinc-500">
+                    No applications yet
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
-    </div>
+
+      {selectedStudent && (
+        <StudentDetailModal
+          student={selectedStudent}
+          onClose={() => setSelectedStudent(null)}
+        />
+      )}
+    </>
   );
 };
 

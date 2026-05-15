@@ -582,6 +582,15 @@ export const GET_APPLICATIONS_BY_COMPANY = gql`
         enrollmentNumber
         cgpa
         skills
+        branch
+        mobile
+        category
+        gender
+        resumeUrl
+        reportCardUrl
+        categoryCertificateUrl
+        domicileUrl
+        personalEmail
       }
       job {
         id
