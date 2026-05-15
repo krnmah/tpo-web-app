@@ -5,6 +5,7 @@ import { useAuth } from "../../context/AuthContext";
 import { useConfirm } from "../../components/ConfirmDialog";
 import { GET_COMPANIES, GET_DASHBOARD_STATS, GET_STUDENTS, GET_PLACED_STUDENTS } from "../../graphql/queries";
 import { ASSIGN_CRC, REMOVE_CRC, CREATE_COMPANY, UPDATE_COMPANY, DELETE_COMPANY } from "../../graphql/queries";
+import EditUserSlideOver from "../../components/EditUserSlideOver";
 import {
   LayoutDashboard,
   Users,
@@ -72,6 +73,10 @@ const AdminDashboard = () => {
   const [editingCompany, setEditingCompany] = useState(null);
   const [editCompanyName, setEditCompanyName] = useState("");
   const [editAssignCrcId, setEditAssignCrcId] = useState("");
+
+  // Edit user state
+  const [selectedUser, setSelectedUser] = useState(null);
+  const [editPanelOpen, setEditPanelOpen] = useState(false);
 
   // Check if enrollment has drop year pattern (contains dash like "2021-22bcse023")
   const isDropYear = (enrollmentNumber) => {
@@ -230,6 +235,28 @@ const AdminDashboard = () => {
     setEditingCompany(null);
     setEditCompanyName("");
     setEditAssignCrcId("");
+  };
+
+  const openEditPanel = (user) => {
+    setSelectedUser(user);
+    setEditPanelOpen(true);
+  };
+
+  const handleEditUserSuccess = (updatedUser) => {
+    console.log('handleEditUserSuccess called with:', updatedUser);
+    setToast({ show: true, message: 'User updated successfully!', type: 'success' });
+    setTimeout(() => setToast(prev => ({ ...prev, show: false })), 3000);
+  };
+
+  const handleEditUserError = (errorMessage) => {
+    console.log('handleEditUserError called with:', errorMessage);
+    setToast({ show: true, message: errorMessage, type: 'error' });
+    setTimeout(() => setToast(prev => ({ ...prev, show: false })), 3000);
+  };
+
+  const closeEditPanel = () => {
+    setEditPanelOpen(false);
+    setSelectedUser(null);
   };
 
   const handleDeleteCompany = async (company) => {
@@ -952,6 +979,7 @@ const AdminDashboard = () => {
                       <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Enrollment</th>
                       <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Batch</th>
                       <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">CGPA</th>
+                      <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100">
@@ -1022,6 +1050,15 @@ const AdminDashboard = () => {
                           )}
                         </td>
                         <td className="px-6 py-4 text-sm text-gray-900">{user.cgpa || "—"}</td>
+                        <td className="px-6 py-4">
+                          <button
+                            onClick={() => openEditPanel(user)}
+                            className="p-2 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer"
+                            aria-label="Edit user"
+                          >
+                            <Pencil className="w-4 h-4 text-gray-600" />
+                          </button>
+                        </td>
                       </tr>
                     );})}
                     {students.filter(student => {
@@ -1042,7 +1079,7 @@ const AdminDashboard = () => {
                       return branchMatch && batchMatch && searchMatch;
                     }).length === 0 && (
                       <tr>
-                        <td colSpan="7" className="px-6 py-12 text-center text-sm text-gray-500">
+                        <td colSpan="8" className="px-6 py-12 text-center text-sm text-gray-500">
                           {searchEnrollment ? `No users found matching "${searchEnrollment}"` : "No users found"}
                         </td>
                       </tr>
@@ -1057,7 +1094,7 @@ const AdminDashboard = () => {
 
       {/* Toast Notification */}
       {toast.show && (
-        <div className="fixed bottom-6 right-6 z-50 animate-slide-up">
+        <div className="fixed bottom-6 right-6 z-[60] animate-slide-up">
           <div className="flex items-center gap-3 bg-white rounded-xl shadow-lg border border-gray-100 px-4 py-3 min-w-[320px]">
             <div className={`p-2 rounded-lg ${
               toast.type === 'success'
@@ -1095,6 +1132,15 @@ const AdminDashboard = () => {
           </div>
         </div>
       )}
+
+      {/* Edit User Slide-over */}
+      <EditUserSlideOver
+        isOpen={editPanelOpen}
+        user={selectedUser}
+        onClose={closeEditPanel}
+        onSuccess={handleEditUserSuccess}
+        onError={handleEditUserError}
+      />
     </div>
   );
 };

@@ -171,6 +171,8 @@ export const GET_STUDENTS = gql`
       skills
       resumeUrl
       reportCardUrl
+      category
+      gender
       createdAt
     }
   }
@@ -238,6 +240,25 @@ export const ASSIGN_CRC = gql`
 export const REMOVE_CRC = gql`
   mutation RemoveCRC($email: String!) {
     removeCRC(email: $email)
+  }
+`;
+
+// ADMIN: Update user fields that are disabled for students
+export const ADMIN_UPDATE_USER = gql`
+  mutation AdminUpdateUser($id: ID!, $input: AdminUpdateUserInput!) {
+    adminUpdateUser(id: $id, input: $input) {
+      id
+      name
+      email
+      enrollmentNumber
+      branch
+      category
+      gender
+      cgpa
+      role
+      createdAt
+      updatedAt
+    }
   }
 `;
 

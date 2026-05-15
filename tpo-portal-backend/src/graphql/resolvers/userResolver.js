@@ -252,6 +252,66 @@ module.exports = {
       logAudit.dataAccess(user.id, `user_delete_${id}`);
 
       return true;
+    },
+
+    /**
+     * ADMIN: Update user fields that are disabled for students
+     * - Only ADMIN can call this
+     * - Can edit: name, enrollmentNumber, branch, category, gender
+     */
+    adminUpdateUser: async (_, { id, input }, { user }) => {
+      try {
+        authorize(user, ['ADMIN']);
+
+        // Validate target user exists
+        const targetUser = await prisma.user.findUnique({
+          where: { id: parseInt(id) }
+        });
+        if (!targetUser) {
+          throw new Error('User not found');
+        }
+
+        // Filter undefined fields (allow empty strings for optional fields)
+        const updateData = Object.entries(input).reduce((acc, [key, value]) => {
+          if (value !== undefined) {
+            acc[key] = value;
+          }
+          return acc;
+        }, {});
+
+        if (Object.keys(updateData).length === 0) {
+          throw new Error('No fields to update');
+        }
+
+        // Validate enrollment uniqueness (if being changed)
+        if (updateData.enrollmentNumber &&
+            updateData.enrollmentNumber !== targetUser.enrollmentNumber) {
+          const existing = await prisma.user.findFirst({
+            where: {
+              enrollmentNumber: updateData.enrollmentNumber,
+              id: { not: parseInt(id) }
+            }
+          });
+          if (existing) throw new Error('Enrollment number already exists');
+        }
+
+        // Update user
+        const updated = await prisma.user.update({
+          where: { id: parseInt(id) },
+          data: updateData
+        });
+
+        logAudit.dataAccess(user.id, `admin_update_user_${id}`);
+
+        return sanitizeUser(updated);
+
+      } catch (error) {
+        // Handle Prisma unique constraint (race condition)
+        if (error.code === 'P2002') {
+          throw new Error('Enrollment number already exists');
+        }
+        throw error;
+      }
     }
   }
 };

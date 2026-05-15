@@ -92,6 +92,14 @@ input UpdateUserInput {
   personalEmail: String
 }
 
+input AdminUpdateUserInput {
+  name: String
+  enrollmentNumber: String
+  branch: String
+  category: Category
+  gender: Gender
+}
+
 extend type Query {
   users: [UserResponse!]!
   user(id: ID!): UserResponse
@@ -125,5 +133,8 @@ extend type Mutation {
 
   # ADMIN: Delete user
   deleteUser(id: ID!): Boolean!
+
+  # ADMIN: Update user fields that are disabled for students
+  adminUpdateUser(id: ID!, input: AdminUpdateUserInput!): UserResponse!
 }
 `;
