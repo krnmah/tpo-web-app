@@ -1,8 +1,9 @@
-import { createContext, useContext, useState, useCallback, useEffect, useRef } from "react";
+import { createContext, useContext, useState, useCallback, useEffect } from "react";
 import { X } from "./Icons";
 
 const ConfirmDialogContext = createContext(null);
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const useConfirm = () => {
   return useContext(ConfirmDialogContext);
 };
@@ -21,10 +22,10 @@ export const ConfirmDialogProvider = ({ children }) => {
     setDialog(null);
   };
 
-  const handleCancel = () => {
+  const handleCancel = useCallback(() => {
     dialog?.resolve(false);
     setDialog(null);
-  };
+  }, [dialog]);
 
   // Close on ESC key
   useEffect(() => {
@@ -35,7 +36,7 @@ export const ConfirmDialogProvider = ({ children }) => {
     };
     window.addEventListener("keydown", handleEsc);
     return () => window.removeEventListener("keydown", handleEsc);
-  }, [dialog]);
+  }, [dialog, handleCancel]);
 
   return (
     <ConfirmDialogContext.Provider value={confirm}>

@@ -131,7 +131,7 @@ export default function EditUserSlideOver({ isOpen, user, onClose, onSuccess, on
           input: cleanInput
         }
       });
-    } catch (err) {
+    } catch {
       // Handled by onError callback
     }
   };

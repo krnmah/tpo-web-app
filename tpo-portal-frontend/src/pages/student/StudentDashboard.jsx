@@ -37,7 +37,7 @@ const JobCardSkeleton = () => (
   </div>
 );
 
-const StatCard = ({ icon: Icon, label, value, link }) => (
+const StatCard = ({ icon, label, value, link }) => (
   <Link
     to={link}
     className="group relative bg-white border border-zinc-200 rounded-2xl p-4 hover:border-zinc-300 hover:shadow-lg hover:shadow-zinc-200/50 hover:-translate-y-0.5 transition-all duration-200 overflow-hidden"
@@ -48,7 +48,7 @@ const StatCard = ({ icon: Icon, label, value, link }) => (
     <div className="relative flex items-center gap-3">
       {/* Icon container with animated background */}
       <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-zinc-100 to-zinc-50 group-hover:from-zinc-200 group-hover:to-zinc-100 flex items-center justify-center text-zinc-600 group-hover:text-zinc-800 group-hover:scale-110 transition-all duration-200">
-        <Icon className="w-5 h-5" />
+        {icon}
       </div>
 
       {/* Content */}
@@ -87,10 +87,10 @@ const StudentDashboard = () => {
   const isLoading = eligibleLoading || applicationsLoading;
 
   const stats = [
-    { icon: Briefcase, label: "Eligible Jobs", value: eligibleLoading ? "—" : eligibleJobs.length, link: "/student/eligible-companies" },
-    { icon: Building, label: "All Jobs", value: "View", link: "/student/all-jobs" },
-    { icon: FileText, label: "Applications", value: applicationsLoading ? "—" : myApplications.length, link: "/student/applications" },
-    { icon: User, label: "Profile", value: "Edit", link: "/student/profile" },
+    { icon: <Briefcase className="w-5 h-5" />, label: "Eligible Jobs", value: eligibleLoading ? "—" : eligibleJobs.length, link: "/student/eligible-companies" },
+    { icon: <Building className="w-5 h-5" />, label: "All Jobs", value: "View", link: "/student/all-jobs" },
+    { icon: <FileText className="w-5 h-5" />, label: "Applications", value: applicationsLoading ? "—" : myApplications.length, link: "/student/applications" },
+    { icon: <User className="w-5 h-5" />, label: "Profile", value: "Edit", link: "/student/profile" },
   ];
 
   const getStatusBadge = (status) => {
@@ -226,7 +226,7 @@ const StudentDashboard = () => {
                                 if (!isNaN(date.getTime())) {
                                   return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
                                 }
-                              } catch (e) {
+                              } catch {
                                 console.log('Invalid date:', app.createdAt);
                               }
                               return 'Recently';

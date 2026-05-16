@@ -46,17 +46,19 @@ export function getSalaryDisplay(job) {
     case 'INTERN_ONLY':
       return stipendAmount ? formatCurrency(stipendAmount, 'stipend') : 'N/A';
 
-    case 'INTERN_PPO':
+    case 'INTERN_PPO': {
       const parts = [];
       if (stipendAmount) parts.push(formatCurrency(stipendAmount, 'stipend'));
       if (ppoAmount) parts.push(formatCurrency(ppoAmount, 'ppo'));
       return parts.length > 0 ? parts.join(' + ') : 'N/A';
+    }
 
-    case 'INTERN_FTE':
+    case 'INTERN_FTE': {
       const fteParts = [];
       if (stipendAmount) fteParts.push(formatCurrency(stipendAmount, 'stipend'));
       if (ctcAmount) fteParts.push(formatCurrency(ctcAmount, 'ctc'));
       return fteParts.length > 0 ? fteParts.join(' + ') : 'N/A';
+    }
 
     case 'FTE_ONLY':
       return ctcAmount ? formatCurrency(ctcAmount, 'ctc') : 'N/A';

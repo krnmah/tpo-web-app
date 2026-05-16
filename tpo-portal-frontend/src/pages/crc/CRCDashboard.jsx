@@ -345,17 +345,22 @@ const CRCDashboard = () => {
   };
 
   const navLinks = [
-    { name: "Overview", tab: "overview", icon: LayoutDashboard },
-    { name: "My Companies", tab: "companies", icon: Building2 },
-    { name: "Manage Jobs", tab: "jobs", icon: Briefcase },
-    { name: "Applications", tab: "applications", icon: FileText },
+    { name: "Overview", tab: "overview", icon: <LayoutDashboard className="w-4 h-4" /> },
+    { name: "My Companies", tab: "companies", icon: <Building2 className="w-4 h-4" /> },
+    { name: "Manage Jobs", tab: "jobs", icon: <Briefcase className="w-4 h-4" /> },
+    { name: "Applications", tab: "applications", icon: <FileText className="w-4 h-4" /> },
   ];
 
-  const StatCard = ({ label, value }) => (
-    <div className="bg-white border border-slate-100 rounded-xl p-5 relative overflow-hidden group">
-      <div className="absolute top-0 right-0 w-16 h-16 bg-gradient-to-br from-indigo-50 to-transparent rounded-bl-3xl opacity-60"></div>
-      <p className="text-sm text-slate-500">{label}</p>
-      <p className="text-2xl font-semibold text-slate-900 mt-1">{value}</p>
+  const StatCard = ({ label, value, icon }) => (
+    <div className="bg-white border border-slate-100 rounded-xl p-5 relative overflow-hidden group hover:scale-[1.02] hover:shadow-lg hover:shadow-indigo-100/50 hover:border-indigo-100 transition-all duration-300 ease-out">
+      <div className="absolute top-0 right-0 w-16 h-16 bg-gradient-to-br from-indigo-50 to-transparent rounded-bl-3xl opacity-60 group-hover:from-indigo-100 group-hover:opacity-80 transition-all duration-300"></div>
+      <div className="flex items-center gap-3">
+        {icon && <div className="p-2 bg-indigo-50 rounded-lg text-indigo-600 group-hover:bg-indigo-100 group-hover:scale-110 transition-all duration-300">{icon}</div>}
+        <div className="group-hover:translate-x-0.5 transition-transform duration-300">
+          <p className="text-sm text-slate-500">{label}</p>
+          <p className="text-2xl font-semibold text-slate-900 mt-1">{value}</p>
+        </div>
+      </div>
     </div>
   );
 
@@ -393,7 +398,6 @@ const CRCDashboard = () => {
         <nav className="flex-1 p-3">
           <ul className="space-y-1">
             {navLinks.map((link) => {
-              const Icon = link.icon;
               return (
                 <li key={link.tab}>
                   <button
@@ -404,7 +408,7 @@ const CRCDashboard = () => {
                         : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/50"
                     }`}
                   >
-                    <Icon className="w-4 h-4" />
+                    {link.icon}
                     {link.name}
                   </button>
                 </li>
@@ -449,10 +453,10 @@ const CRCDashboard = () => {
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              <StatCard label="My Companies" value={companies.length} />
-              <StatCard label="Active Jobs" value={jobs.filter(j => j.status === "OPEN").length} />
-              <StatCard label="Total Applicants" value={jobs.reduce((sum, j) => sum + (j._applicationCount || 0), 0)} />
-              <StatCard label="Open Positions" value={jobs.filter(j => j.status === "OPEN").length} />
+              <StatCard label="My Companies" value={companies.length} icon={<Building2 className="w-5 h-5" />} />
+              <StatCard label="Active Jobs" value={jobs.filter(j => j.status === "OPEN").length} icon={<Briefcase className="w-5 h-5" />} />
+              <StatCard label="Total Applicants" value={jobs.reduce((sum, j) => sum + (j._applicationCount || 0), 0)} icon={<Users className="w-5 h-5" />} />
+              <StatCard label="Open Positions" value={jobs.filter(j => j.status === "OPEN").length} icon={<TrendingUp className="w-5 h-5" />} />
             </div>
 
             <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
