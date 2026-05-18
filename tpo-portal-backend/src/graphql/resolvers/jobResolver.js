@@ -97,7 +97,17 @@ module.exports = {
 
       if (!student || student.cgpa === null) return false;
 
-      return student.cgpa >= job.minCgpa;
+      // Check CGPA
+      if (student.cgpa < job.minCgpa) return false;
+
+      // Check branch (if eligibleBranches is set, student must be in one of them)
+      if (job.eligibleBranches && job.eligibleBranches.length > 0) {
+        if (!student.branch || !job.eligibleBranches.includes(student.branch)) {
+          return false;
+        }
+      }
+
+      return true;
     }
   },
 
@@ -165,7 +175,12 @@ module.exports = {
       const jobs = await prisma.job.findMany({
         where: {
           status: 'OPEN',
-          minCgpa: { lte: student.cgpa }
+          minCgpa: { lte: student.cgpa },
+          OR: [
+            { eligibleBranches: { isEmpty: true } },
+            { eligibleBranches: { has: student.branch } },
+            { eligibleBranches: null }
+          ]
         },
         include: {
           company: true
@@ -199,6 +214,7 @@ module.exports = {
             companyId: validated.companyId,
             minCgpa: validated.minCgpa,
             requiredSkills: validated.requiredSkills,
+            eligibleBranches: validated.eligibleBranches || [],
             jobType: salaryValidated.jobType,
             stipendAmount: salaryValidated.stipendAmount ? parseFloat(salaryValidated.stipendAmount) : null,
             ppoAmount: salaryValidated.ppoAmount ? parseFloat(salaryValidated.ppoAmount) : null,
@@ -215,13 +231,18 @@ module.exports = {
         // Send email notification to eligible students (only for OPEN jobs)
         if (job.status === 'OPEN') {
           // Find all STUDENTs and CRCs (who are also students) whose CGPA meets the minimum requirement
+          // AND whose branch is in eligibleBranches (if branches are specified)
           const eligibleStudents = await prisma.user.findMany({
             where: {
               role: { in: ['STUDENT', 'CRC'] },
               cgpa: {
                 gte: job.minCgpa,
                 not: null
-              }
+              },
+              ...(job.eligibleBranches && job.eligibleBranches.length > 0
+                ? { branch: { in: job.eligibleBranches } }
+                : {}
+              )
             },
             select: {
               email: true,
@@ -329,6 +350,7 @@ module.exports = {
       if (input.description !== undefined) updateData.description = input.description;
       if (input.minCgpa !== undefined) updateData.minCgpa = input.minCgpa;
       if (input.requiredSkills) updateData.requiredSkills = input.requiredSkills;
+      if (input.eligibleBranches) updateData.eligibleBranches = input.eligibleBranches;
       if (input.status) updateData.status = input.status;
       updateData.jobType = validatedData.jobType;
       updateData.stipendAmount = validatedData.stipendAmount;
@@ -353,7 +375,11 @@ module.exports = {
             cgpa: {
               gte: updated.minCgpa,   // New lower bound (inclusive)
               lt: existing.minCgpa     // Old upper bound (exclusive) - only students in this range
-            }
+            },
+            ...(updated.eligibleBranches && updated.eligibleBranches.length > 0
+              ? { branch: { in: updated.eligibleBranches } }
+              : {}
+            )
           },
           select: {
             email: true,

@@ -38,6 +38,7 @@ const CRCDashboard = () => {
   const isStudentMode = activeRole === 'STUDENT';
   const [showCompanyForm, setShowCompanyForm] = useState(false);
   const [newCompany, setNewCompany] = useState({ name: "", description: "" });
+  const [skillsInput, setSkillsInput] = useState("");
 
   const handleLogout = async () => {
     const confirmed = await confirm(
@@ -70,6 +71,18 @@ const CRCDashboard = () => {
   const [updateApplicationStatus] = useMutation(UPDATE_APPLICATION_STATUS);
   const [createMyCompany] = useMutation(CREATE_MY_COMPANY);
 
+  // Branches list (matching EditUserSlideOver.jsx)
+  const BRANCHES = [
+    "Chemical Engineering",
+    "Civil Engineering",
+    "Computer Science and Engineering",
+    "Electrical Engineering",
+    "Electronics and Communication Engineering",
+    "Information Technology",
+    "Mechanical Engineering",
+    "Metallurgical and Materials Engineering"
+  ];
+
   // Forms
   const [newJob, setNewJob] = useState({
     title: "",
@@ -77,6 +90,7 @@ const CRCDashboard = () => {
     description: "",
     minCgpa: "",
     requiredSkills: [],
+    eligibleBranches: [],
     jobType: "INTERN_ONLY",
     stipendAmount: "",
     ppoAmount: "",
@@ -108,8 +122,15 @@ const CRCDashboard = () => {
       setTimeout(() => setToast({ ...toast, show: false }), 3000);
       return;
     }
-    if (!newJob.requiredSkills?.length) {
+    // Parse skills input into array
+    const requiredSkills = skillsInput.split(",").map(s => s.trim()).filter(s => s.length > 0);
+    if (!requiredSkills.length) {
       setToast({ show: true, message: 'Please enter at least one skill', type: 'error' });
+      setTimeout(() => setToast({ ...toast, show: false }), 3000);
+      return;
+    }
+    if (!newJob.eligibleBranches?.length) {
+      setToast({ show: true, message: 'Please select at least one eligible branch', type: 'error' });
       setTimeout(() => setToast({ ...toast, show: false }), 3000);
       return;
     }
@@ -136,7 +157,8 @@ const CRCDashboard = () => {
             companyId: parseInt(newJob.companyId),
             description: newJob.description,
             minCgpa: minCgpa,
-            requiredSkills: newJob.requiredSkills,
+            requiredSkills: requiredSkills,
+            eligibleBranches: newJob.eligibleBranches,
             jobType: newJob.jobType,
             stipendAmount: salaryData.stipendAmount,
             ppoAmount: salaryData.ppoAmount,
@@ -155,11 +177,13 @@ const CRCDashboard = () => {
         description: "",
         minCgpa: "",
         requiredSkills: [],
+        eligibleBranches: [],
         jobType: "INTERN_ONLY",
         stipendAmount: "",
         ppoAmount: "",
         ctcAmount: ""
       });
+      setSkillsInput("");
       setShowJobForm(false);
       refetchJobs();
       setToast({ show: true, message: 'Job posted successfully! Eligible students have been notified.', type: 'success' });
@@ -178,11 +202,13 @@ const CRCDashboard = () => {
       description: job.description || "",
       minCgpa: job.minCgpa?.toString(),
       requiredSkills: job.requiredSkills || [],
+      eligibleBranches: job.eligibleBranches || [],
       jobType: job.jobType || "INTERN_ONLY",
       stipendAmount: job.stipendAmount?.toString() || "",
       ppoAmount: job.ppoAmount?.toString() || "",
       ctcAmount: job.ctcAmount?.toString() || ""
     });
+    setSkillsInput(job.requiredSkills ? job.requiredSkills.join(", ") : "");
     setShowJobForm(true);
   };
 
@@ -201,8 +227,15 @@ const CRCDashboard = () => {
       setTimeout(() => setToast({ ...toast, show: false }), 3000);
       return;
     }
-    if (!newJob.requiredSkills?.length) {
+    // Parse skills input into array
+    const requiredSkills = skillsInput.split(",").map(s => s.trim()).filter(s => s.length > 0);
+    if (!requiredSkills.length) {
       setToast({ show: true, message: 'Please enter at least one skill', type: 'error' });
+      setTimeout(() => setToast({ ...toast, show: false }), 3000);
+      return;
+    }
+    if (!newJob.eligibleBranches?.length) {
+      setToast({ show: true, message: 'Please select at least one eligible branch', type: 'error' });
       setTimeout(() => setToast({ ...toast, show: false }), 3000);
       return;
     }
@@ -222,6 +255,8 @@ const CRCDashboard = () => {
     }
 
     try {
+      // Parse skills input into array
+      const requiredSkills = skillsInput.split(",").map(s => s.trim()).filter(s => s.length > 0);
       const cgpaChanged = editingJob.minCgpa !== minCgpa;
       await updateJob({
         variables: {
@@ -230,7 +265,8 @@ const CRCDashboard = () => {
             title: newJob.title,
             description: newJob.description,
             minCgpa: minCgpa,
-            requiredSkills: newJob.requiredSkills,
+            requiredSkills: requiredSkills,
+            eligibleBranches: newJob.eligibleBranches,
             jobType: newJob.jobType,
             stipendAmount: salaryData.stipendAmount,
             ppoAmount: salaryData.ppoAmount,
@@ -245,11 +281,13 @@ const CRCDashboard = () => {
         description: "",
         minCgpa: "",
         requiredSkills: [],
+        eligibleBranches: [],
         jobType: "INTERN_ONLY",
         stipendAmount: "",
         ppoAmount: "",
         ctcAmount: ""
       });
+      setSkillsInput("");
       setShowJobForm(false);
       refetchJobs();
       const message = cgpaChanged
@@ -271,11 +309,13 @@ const CRCDashboard = () => {
       description: "",
       minCgpa: "",
       requiredSkills: [],
+      eligibleBranches: [],
       jobType: "INTERN_ONLY",
       stipendAmount: "",
       ppoAmount: "",
       ctcAmount: ""
     });
+    setSkillsInput("");
     setShowJobForm(false);
   };
 
@@ -759,15 +799,45 @@ const CRCDashboard = () => {
                       <input
                         type="text"
                         placeholder="e.g., Java, Python, React"
-                        value={newJob.requiredSkills.join(",")}
-                        onChange={(e) => setNewJob({ ...newJob, requiredSkills: e.target.value.split(",").map(s => s.trim()).filter(s => s) })}
+                        value={skillsInput}
+                        onChange={(e) => setSkillsInput(e.target.value)}
                         className="w-full px-3 py-2.5 border border-zinc-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all placeholder:text-zinc-400"
                         required
                       />
                     </div>
+
+                    {/* Eligible Branches Selector */}
+                    <div className="md:col-span-2">
+                      <label className="block text-xs font-medium text-zinc-600 mb-1.5">
+                        Eligible Branches <span className="text-red-500">*</span>
+                      </label>
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 p-3 bg-zinc-50 border border-zinc-200 rounded-lg">
+                        {BRANCHES.map((branch) => (
+                          <label key={branch} className="flex items-center gap-2 text-xs text-zinc-700 cursor-pointer hover:text-zinc-900 transition-colors">
+                            <input
+                              type="checkbox"
+                              checked={newJob.eligibleBranches?.includes(branch) || false}
+                              onChange={(e) => {
+                                const branches = newJob.eligibleBranches || [];
+                                if (e.target.checked) {
+                                  setNewJob({ ...newJob, eligibleBranches: [...branches, branch] });
+                                } else {
+                                  setNewJob({ ...newJob, eligibleBranches: branches.filter(b => b !== branch) });
+                                }
+                              }}
+                              className="rounded border-zinc-300 text-indigo-600 focus:ring-indigo-500 focus:ring-offset-0 cursor-pointer"
+                            />
+                            <span className="truncate">{branch}</span>
+                          </label>
+                        ))}
+                      </div>
+                      {newJob.eligibleBranches?.length === 0 && (
+                        <p className="text-xs text-red-500 mt-1">Please select at least one branch</p>
+                      )}
+                    </div>
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-zinc-600 mb-1.5">Job Description</label>
+                    <label className="block text-xs font-medium text-zinc-600 mb-1.5">Job Description *</label>
                     <textarea
                       placeholder="Describe the role, responsibilities, and requirements..."
                       value={newJob.description}
@@ -775,6 +845,7 @@ const CRCDashboard = () => {
                       className="w-full px-3 py-2.5 border border-zinc-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 resize-none transition-all placeholder:text-zinc-400"
                       rows="3"
                     />
+                    <p className="text-xs text-zinc-500 mt-1">Minimum 20 characters</p>
                   </div>
                   <div className="flex items-center justify-end gap-3 pt-2">
                     <button
@@ -819,6 +890,11 @@ const CRCDashboard = () => {
                         <p className="text-xs text-zinc-400 mt-2">
                           Min CGPA: {job.minCgpa} · Skills: {job.requiredSkills?.join(", ")}
                         </p>
+                        {job.eligibleBranches && job.eligibleBranches.length > 0 && (
+                          <p className="text-xs text-zinc-400 mt-1">
+                            Branches: {job.eligibleBranches.join(", ")}
+                          </p>
+                        )}
                         {job.jobType && (
                           <p className="text-xs text-zinc-400 mt-1">
                             Type: {job.jobType.replace(/_/g, ' ')}

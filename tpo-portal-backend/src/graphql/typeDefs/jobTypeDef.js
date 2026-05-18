@@ -14,10 +14,11 @@ enum JobStatus {
 type Job {
   id: ID!
   title: String!
-  description: String
+  description: String!
   company: Company!
   minCgpa: Float!
   requiredSkills: [String!]!
+  eligibleBranches: [String!]!
   status: JobStatus!
   jobType: JobType!
   stipendAmount: Float
@@ -31,10 +32,11 @@ type Job {
 
 input CreateJobInput {
   title: String!
-  description: String
+  description: String!
   companyId: Int!
   minCgpa: Float!
   requiredSkills: [String!]!
+  eligibleBranches: [String!]!
   status: JobStatus
   jobType: JobType!
   stipendAmount: Float
@@ -44,9 +46,10 @@ input CreateJobInput {
 
 input UpdateJobInput {
   title: String
-  description: String
+  description: String!
   minCgpa: Float
   requiredSkills: [String!]
+  eligibleBranches: [String!]
   status: JobStatus
   jobType: JobType
   stipendAmount: Float

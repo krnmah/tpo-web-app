@@ -90,19 +90,20 @@ model Company {
 }
 
 model Job {
-  id             Int        @id @default(autoincrement())
-  title          String
-  companyId      Int
-  description    String?
-  minCgpa        Float
-  requiredSkills String[]
-  status         JobStatus  @default(OPEN)
-  jobType        JobType    @default(INTERN_ONLY)
-  stipendAmount  Float?
-  ppoAmount      Float?
-  ctcAmount      Float?
-  createdAt      DateTime   @default(now())
-  updatedAt      DateTime   @updatedAt
+  id               Int        @id @default(autoincrement())
+  title            String
+  companyId        Int
+  description      String?
+  minCgpa          Float
+  requiredSkills   String[]
+  eligibleBranches String[]   @default([])
+  status           JobStatus  @default(OPEN)
+  jobType          JobType    @default(INTERN_ONLY)
+  stipendAmount    Float?
+  ppoAmount        Float?
+  ctcAmount        Float?
+  createdAt        DateTime   @default(now())
+  updatedAt        DateTime   @updatedAt
 
   @@index([companyId])
   @@index([status])

@@ -73,9 +73,10 @@ const loginSchema = z.object({
 const createJobSchema = z.object({
   title: z.string().min(3, 'Job title must be at least 3 characters'),
   companyId: z.number().int().positive('Invalid company ID'),
-  description: z.string().optional(),
+  description: z.string().min(20, 'Description must be at least 20 characters'),
   minCgpa: cgpaSchema,
-  requiredSkills: z.array(z.string()).min(1, 'At least one skill is required')
+  requiredSkills: z.array(z.string()).min(1, 'At least one skill is required'),
+  eligibleBranches: z.array(z.string()).min(1, 'At least one eligible branch is required')
 });
 
 // Company creation validation schema
