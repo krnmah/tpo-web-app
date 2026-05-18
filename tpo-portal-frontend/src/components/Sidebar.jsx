@@ -7,6 +7,7 @@ import {
   Building,
   Briefcase,
   FileText,
+  FileCheck,
   LogOut,
   SwitchHorizontal,
 } from "./Icons";
@@ -24,6 +25,7 @@ const Sidebar = () => {
     { name: "All Jobs", path: "/student/all-jobs", icon: Briefcase },
     { name: "Eligible Jobs", path: "/student/eligible-companies", icon: Building },
     { name: "Applications", path: "/student/applications", icon: FileText },
+    { name: "Get NOC", path: "/student/noc", icon: FileCheck },
   ];
 
   const handleLogout = async () => {

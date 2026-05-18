@@ -42,6 +42,7 @@ services:
     volumes:
       - ./tpo-portal-backend/src:/app/src
       - ./tpo-portal-backend/prisma:/app/prisma
+      - ./tpo-portal-backend/templates:/app/templates
       - backend-node-modules:/app/node_modules
     environment:
       DATABASE_URL: postgresql://postgres:postgres@postgres:5432/tnp_portal

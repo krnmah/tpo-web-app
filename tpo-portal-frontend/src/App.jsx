@@ -13,6 +13,7 @@ import AllJobs from "./pages/student/AllCompanies";
 import EligibleCompanies from "./pages/student/EligibleCompanies";
 import Applications from "./pages/student/ApplicationTracker";
 import StudentDashboard from "./pages/student/StudentDashboard";
+import NOCSection from "./pages/student/NOCSection";
 import CRCDashboard from "./pages/crc/CRCDashboard";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import { useEffect } from "react";
@@ -88,6 +89,7 @@ function AppRoutes() {
         <Route path="all-jobs" element={<AllJobs />} />
         <Route path="eligible-companies" element={<EligibleCompanies />} />
         <Route path="applications" element={<Applications />} />
+        <Route path="noc" element={<NOCSection />} />
       </Route>
 
       {/* CRC Panel (CRC-specific management features) */}

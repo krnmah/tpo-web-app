@@ -78,6 +78,10 @@ async function startServer() {
     allowedHeaders: ['Content-Type', 'Authorization']
   };
 
+  // NOC Generation Route (REST endpoint for file downloads)
+  const nocRouter = require('./routes/noc');
+  app.use('/api/noc', cors(corsOptions), bodyParser.json(), nocRouter);
+
   app.use(
     '/graphql',
     cors(corsOptions),
