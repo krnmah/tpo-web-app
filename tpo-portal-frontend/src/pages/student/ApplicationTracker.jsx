@@ -50,13 +50,13 @@ const ApplicationTracker = () => {
       ) : (
         /* Applications List */
         <div className="bg-white border border-zinc-100 rounded-xl overflow-hidden">
-          {/* Table Header */}
-          <div className="px-5 py-4 border-b border-zinc-100">
+          {/* Table Header - Desktop Only */}
+          <div className="hidden md:block px-5 py-4 border-b border-zinc-100">
             <h3 className="text-sm font-semibold text-zinc-900">Application History</h3>
           </div>
 
-          {/* Table */}
-          <div className="overflow-x-auto">
+          {/* Desktop Table */}
+          <div className="hidden md:block overflow-x-auto">
             <table className="w-full">
               <thead>
                 <tr className="border-b border-zinc-100">
@@ -109,6 +109,48 @@ const ApplicationTracker = () => {
                 ))}
               </tbody>
             </table>
+          </div>
+
+          {/* Mobile Card View */}
+          <div className="md:hidden p-4 space-y-3">
+            <h3 className="text-sm font-semibold text-zinc-900 px-1">Application History</h3>
+            {applications.map((app) => (
+              <div key={app.id} className="border border-zinc-200 rounded-xl p-4 bg-white">
+                <div className="flex items-start gap-3 mb-3">
+                  <div className="w-10 h-10 rounded-lg bg-zinc-100 flex items-center justify-center text-zinc-600 flex-shrink-0">
+                    <Building2 className="w-5 h-5" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <h4 className="text-sm font-semibold text-zinc-900 truncate">{app.company?.name || "N/A"}</h4>
+                    <div className="flex items-center gap-1 text-zinc-600 mt-0.5">
+                      <Briefcase className="w-3.5 h-3.5" />
+                      <span className="text-xs truncate">{app.job?.title || "N/A"}</span>
+                    </div>
+                  </div>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className={`px-2.5 py-1 text-xs font-medium rounded-lg border ${getStatusBadge(app.status)}`}>
+                    {app.status}
+                  </span>
+                  <div className="flex items-center gap-1.5 text-xs text-zinc-500">
+                    <Calendar className="w-3.5 h-3.5" />
+                    <span>
+                      {(() => {
+                        let date;
+                        if (/^\d+$/.test(app.createdAt)) {
+                          date = new Date(parseInt(app.createdAt));
+                        } else {
+                          date = new Date(app.createdAt);
+                        }
+                        return isNaN(date.getTime())
+                          ? 'N/A'
+                          : date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+                      })()}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       )}

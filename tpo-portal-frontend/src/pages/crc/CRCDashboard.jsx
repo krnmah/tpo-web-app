@@ -24,12 +24,14 @@ import {
   ChevronDown,
   Pencil,
   Trash2,
+  Menu,
 } from "../../components/Icons";
 
 const CRCDashboard = () => {
   const { user, activeRole, toggleRole, logout } = useAuth();
   const navigate = useNavigate();
   const confirm = useConfirm();
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("overview");
   const [selectedCompany, setSelectedCompany] = useState(null);
   const [showJobForm, setShowJobForm] = useState(false);
@@ -410,12 +412,35 @@ const CRCDashboard = () => {
 
   return (
     <div className="flex min-h-screen bg-slate-50">
+      {/* Mobile Backdrop */}
+      {mobileSidebarOpen && (
+        <div
+          className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+          onClick={() => setMobileSidebarOpen(false)}
+          aria-hidden="true"
+        />
+      )}
+
       {/* Sidebar */}
-      <aside className="w-60 bg-slate-900 min-h-screen flex flex-col">
+      <aside className={`
+        fixed lg:sticky top-0 left-0 z-50 lg:z-auto
+        w-60 bg-slate-900 min-h-screen flex flex-col
+        transition-transform duration-300 ease-in-out
+        ${mobileSidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
+      `}>
         {/* Header */}
-        <div className="p-5 border-b border-slate-700/50">
-          <h2 className="text-sm font-semibold text-white tracking-tight">Training & Placement</h2>
-          <p className="text-xs text-slate-400 mt-0.5">NIT Srinagar</p>
+        <div className="p-5 border-b border-slate-700/50 flex items-center justify-between">
+          <div>
+            <h2 className="text-sm font-semibold text-white tracking-tight">Training & Placement</h2>
+            <p className="text-xs text-slate-400 mt-0.5">NIT Srinagar</p>
+          </div>
+          <button
+            onClick={() => setMobileSidebarOpen(false)}
+            className="lg:hidden p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+            aria-label="Close sidebar"
+          >
+            <X className="w-5 h-5" />
+          </button>
         </div>
 
         {/* Mode Toggle */}
@@ -424,6 +449,7 @@ const CRCDashboard = () => {
             onClick={() => {
               toggleRole();
               navigate(isStudentMode ? "/crc/dashboard" : "/student/dashboard");
+              setMobileSidebarOpen(false);
             }}
             className="w-full flex items-center justify-between px-3 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 transition-colors"
           >
@@ -441,7 +467,10 @@ const CRCDashboard = () => {
               return (
                 <li key={link.tab}>
                   <button
-                    onClick={() => setActiveTab(link.tab)}
+                    onClick={() => {
+                      setActiveTab(link.tab);
+                      setMobileSidebarOpen(false);
+                    }}
                     className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
                       activeTab === link.tab
                         ? "bg-gradient-to-r from-indigo-600 to-indigo-700 text-white shadow-md shadow-indigo-900/20"
@@ -483,7 +512,23 @@ const CRCDashboard = () => {
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 p-6 lg:p-8 overflow-y-auto">
+      <main className="flex-1 overflow-y-auto transition-transform duration-300 ease-in-out">
+        {/* Mobile Header - Hidden on Desktop */}
+        <header className={`lg:hidden sticky top-0 z-[60] bg-white border-b border-slate-200 px-4 py-3 flex items-center gap-3 transition-transform duration-300 ease-in-out ${mobileSidebarOpen ? 'translate-x-60' : ''}`}>
+          <button
+            onClick={() => setMobileSidebarOpen(true)}
+            className="p-2 rounded-lg text-slate-600 hover:bg-slate-100 transition-colors"
+            aria-label="Open menu"
+          >
+            <Menu className="w-5 h-5" />
+          </button>
+          <div>
+            <h1 className="text-sm font-semibold text-slate-900">Training & Placement</h1>
+            <p className="text-xs text-slate-500">NIT Srinagar</p>
+          </div>
+        </header>
+
+        <div className={`p-4 sm:p-6 lg:p-8 transition-transform duration-300 ease-in-out ${mobileSidebarOpen ? 'translate-x-60' : ''}`}>
         {/* Overview Tab */}
         {activeTab === "overview" && (
           <div className="space-y-6">
@@ -1014,6 +1059,7 @@ const CRCDashboard = () => {
             )}
           </div>
         )}
+        </div>
       </main>
 
       {/* Toast Notification */}

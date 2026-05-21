@@ -1,4 +1,5 @@
 import { NavLink, useNavigate } from "react-router-dom";
+import { useEffect } from "react";
 import { useAuth } from "../context/AuthContext";
 import { useConfirm } from "./ConfirmDialog";
 import {
@@ -10,14 +11,28 @@ import {
   FileCheck,
   LogOut,
   SwitchHorizontal,
+  X,
 } from "./Icons";
 
-const Sidebar = () => {
+const Sidebar = ({ mobileOpen, onClose }) => {
   const { user, logout, activeRole, toggleRole } = useAuth();
   const navigate = useNavigate();
   const confirm = useConfirm();
   const isCRC = user?.role === 'CRC';
   const isInStudentMode = activeRole === 'STUDENT';
+
+  // Close sidebar on escape key
+  useEffect(() => {
+    const handleEscape = (e) => {
+      if (e.key === 'Escape' && mobileOpen && onClose) {
+        onClose();
+      }
+    };
+    if (mobileOpen) {
+      document.addEventListener('keydown', handleEscape);
+      return () => document.removeEventListener('keydown', handleEscape);
+    }
+  }, [mobileOpen, onClose]);
 
   const links = [
     { name: "Dashboard", path: "/student/dashboard", icon: LayoutDashboard },
@@ -46,6 +61,11 @@ const Sidebar = () => {
     } else {
       navigate("/student/dashboard");
     }
+    if (onClose) onClose();
+  };
+
+  const handleNavClick = () => {
+    if (onClose) onClose();
   };
 
   const avatar = user?.name
@@ -53,11 +73,36 @@ const Sidebar = () => {
     : "https://api.dicebear.com/9.x/initials/svg?seed=S&backgroundColor=18181b&fontSize=40&textColor=ffffff";
 
   return (
-    <aside className="w-60 bg-zinc-900 min-h-screen flex flex-col">
+    <>
+      {/* Mobile Backdrop */}
+      {mobileOpen && (
+        <div
+          className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+          onClick={onClose}
+          aria-hidden="true"
+        />
+      )}
+
+      {/* Sidebar */}
+      <aside className={`
+        fixed lg:sticky top-0 left-0 z-50 lg:z-auto
+        w-60 bg-zinc-900 min-h-screen flex flex-col
+        transition-transform duration-300 ease-in-out
+        ${mobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
+      `}>
       {/* Header */}
-      <div className="p-5 border-b border-zinc-800">
-        <h2 className="text-sm font-semibold text-white tracking-tight">Training & Placement</h2>
-        <p className="text-xs text-zinc-500 mt-0.5">NIT Srinagar</p>
+      <div className="p-5 border-b border-zinc-800 flex items-center justify-between">
+        <div>
+          <h2 className="text-sm font-semibold text-white tracking-tight">Training & Placement</h2>
+          <p className="text-xs text-zinc-500 mt-0.5">NIT Srinagar</p>
+        </div>
+        <button
+          onClick={onClose}
+          className="lg:hidden p-1 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors"
+          aria-label="Close sidebar"
+        >
+          <X className="w-5 h-5" />
+        </button>
       </div>
 
       {/* Role Toggle for CRC */}
@@ -85,6 +130,7 @@ const Sidebar = () => {
                 <NavLink
                   to={link.path}
                   end={link.path === "/student/dashboard"}
+                  onClick={handleNavClick}
                   className={({ isActive }) =>
                     `flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
                       isActive
@@ -126,6 +172,7 @@ const Sidebar = () => {
         </button>
       </div>
     </aside>
+    </>
   );
 };
 

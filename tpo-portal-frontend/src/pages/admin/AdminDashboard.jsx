@@ -19,10 +19,12 @@ import {
   Shield,
   Pencil,
   Trash2,
+  Menu,
 } from "../../components/Icons";
 
 const AdminDashboard = () => {
   const { user, logout } = useAuth();
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
 
   // Helper to safely format dates
   const formatDate = (dateValue) => {
@@ -316,8 +318,23 @@ const AdminDashboard = () => {
 
   return (
     <div className="flex min-h-screen bg-gray-50">
-      <aside className="w-64 bg-white border-r border-gray-200 min-h-screen flex flex-col">
-        <div className="p-6 border-b border-gray-200">
+      {/* Mobile Backdrop */}
+      {mobileSidebarOpen && (
+        <div
+          className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+          onClick={() => setMobileSidebarOpen(false)}
+          aria-hidden="true"
+        />
+      )}
+
+      {/* Sidebar */}
+      <aside className={`
+        fixed lg:sticky top-0 left-0 z-50 lg:z-auto
+        w-64 bg-white border-r border-gray-200 min-h-screen flex flex-col
+        transition-transform duration-300 ease-in-out
+        ${mobileSidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
+      `}>
+        <div className="p-6 border-b border-gray-200 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center">
               <Shield className="w-5 h-5 text-white" />
@@ -327,6 +344,13 @@ const AdminDashboard = () => {
               <p className="text-xs text-gray-500">NIT Srinagar</p>
             </div>
           </div>
+          <button
+            onClick={() => setMobileSidebarOpen(false)}
+            className="lg:hidden p-1 rounded-lg text-gray-500 hover:text-gray-700 hover:bg-gray-100 transition-colors"
+            aria-label="Close sidebar"
+          >
+            <X className="w-5 h-5" />
+          </button>
         </div>
 
         <nav className="flex-1 p-4">
@@ -338,6 +362,7 @@ const AdminDashboard = () => {
                 <li key={link.path}>
                   <Link
                     to={link.path}
+                    onClick={() => setMobileSidebarOpen(false)}
                     className={`flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-all ${
                       isActive
                         ? "bg-blue-600 text-white shadow-sm"
@@ -371,7 +396,23 @@ const AdminDashboard = () => {
         </div>
       </aside>
 
-      <main className="flex-1 p-8 overflow-y-auto">
+      <main className="flex-1 overflow-y-auto transition-transform duration-300 ease-in-out">
+        {/* Mobile Header - Hidden on Desktop */}
+        <header className={`lg:hidden sticky top-0 z-[60] bg-white border-b border-gray-200 px-4 py-3 flex items-center gap-3 transition-transform duration-300 ease-in-out ${mobileSidebarOpen ? 'translate-x-64' : ''}`}>
+          <button
+            onClick={() => setMobileSidebarOpen(true)}
+            className="p-2 rounded-lg text-gray-600 hover:bg-gray-100 transition-colors"
+            aria-label="Open menu"
+          >
+            <Menu className="w-5 h-5" />
+          </button>
+          <div>
+            <h1 className="text-sm font-semibold text-gray-900">Admin Panel</h1>
+            <p className="text-xs text-gray-500">NIT Srinagar</p>
+          </div>
+        </header>
+
+        <div className={`p-4 sm:p-6 lg:p-8 transition-transform duration-300 ease-in-out ${mobileSidebarOpen ? 'translate-x-64' : ''}`}>
         {activeTab === "dashboard" && (
           <div className="space-y-8">
             <div className="flex items-center justify-between">
@@ -821,7 +862,7 @@ const AdminDashboard = () => {
 
             {/* Placed Students Table */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-              <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+              <div className="px-4 sm:px-6 py-4 border-b border-gray-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                 <div className="flex items-center gap-3">
                   <div className="p-2 bg-green-50 rounded-lg">
                     <Check className="w-4 h-4 text-green-600" />
@@ -831,12 +872,12 @@ const AdminDashboard = () => {
                     <p className="text-xs text-gray-500">{placedStudents.length} students placed</p>
                   </div>
                 </div>
-                <div className="flex items-center gap-3">
-                  <label className="text-sm text-gray-600 font-medium">Branch:</label>
+                <div className="flex items-center gap-2 sm:gap-3">
+                  <label className="text-sm text-gray-600 font-medium whitespace-nowrap">Branch:</label>
                   <select
                     value={statsBranchFilter}
                     onChange={(e) => setStatsBranchFilter(e.target.value)}
-                    className="px-4 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 min-w-0 flex-1 sm:flex-none"
                   >
                     <option value="All">All Branches</option>
                     {[...new Set(students.map((s) => s.branch).filter(Boolean))].sort().map((branch) => (
@@ -907,19 +948,19 @@ const AdminDashboard = () => {
 
         {activeTab === "users" && (
           <div className="space-y-6">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
               <div>
                 <h1 className="text-2xl font-bold text-gray-900">User Management</h1>
                 <p className="text-sm text-gray-500 mt-1">View and manage all registered users</p>
               </div>
-              <div className="flex items-center gap-3">
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3">
                 <div className="relative">
                   <input
                     type="text"
                     placeholder="Search enrollment..."
                     value={searchEnrollment}
                     onChange={(e) => setSearchEnrollment(e.target.value)}
-                    className="w-48 pl-9 pr-3 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 placeholder-gray-400"
+                    className="w-full sm:w-48 pl-9 pr-8 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 placeholder-gray-400"
                   />
                   <svg className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -933,12 +974,12 @@ const AdminDashboard = () => {
                     </button>
                   )}
                 </div>
-                <div className="flex items-center gap-2">
-                  <label className="text-sm text-gray-600 font-medium">Branch:</label>
+                <div className="flex items-center gap-2 min-w-0">
+                  <label className="text-sm text-gray-600 font-medium whitespace-nowrap">Branch:</label>
                   <select
                     value={selectedBranch}
                     onChange={(e) => setSelectedBranch(e.target.value)}
-                    className="px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="px-2 sm:px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 min-w-0 flex-1"
                   >
                     <option value="All">All</option>
                     {[...new Set(students.map((s) => s.branch).filter(Boolean))].sort().map((branch) => (
@@ -948,12 +989,12 @@ const AdminDashboard = () => {
                     ))}
                   </select>
                 </div>
-                <div className="flex items-center gap-2">
-                  <label className="text-sm text-gray-600 font-medium">Batch:</label>
+                <div className="flex items-center gap-2 min-w-0">
+                  <label className="text-sm text-gray-600 font-medium whitespace-nowrap">Batch:</label>
                   <select
                     value={selectedBatch}
                     onChange={(e) => setSelectedBatch(e.target.value)}
-                    className="px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="px-2 sm:px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 min-w-0 flex-1"
                   >
                     <option value="All">All</option>
                     {allBatches.map((batch) => (
@@ -1090,6 +1131,7 @@ const AdminDashboard = () => {
             </div>
           </div>
         )}
+        </div>
       </main>
 
       {/* Toast Notification */}
