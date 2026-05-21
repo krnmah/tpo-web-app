@@ -11,6 +11,7 @@ import {
   Check,
   ArrowRight,
   IndianRupee,
+  MapPin,
 } from "../../components/Icons";
 
 const EligibleCompanies = () => {
@@ -98,6 +99,40 @@ const EligibleCompanies = () => {
                         {job.jobType.replace(/_/g, ' ')}
                       </span>
                       <span className="font-medium text-zinc-900">{getSalaryDisplay(job)}</span>
+                    </div>
+                  )}
+                  {job.eligibleBranches && job.eligibleBranches.length > 0 && (
+                    <div>
+                      <span className="text-xs text-zinc-500 flex items-center gap-1.5 mb-2">
+                        <MapPin className="w-4 h-4" />
+                        Eligible Branches
+                      </span>
+                      <div className="flex flex-wrap gap-1.5">
+                        {job.eligibleBranches.slice(0, 3).map((branch, i) => {
+                          // Abbreviate branch names for display
+                          const abbreviateBranch = (b) => {
+                            if (b.includes('Computer Science')) return 'CSE';
+                            if (b.includes('Information Technology')) return 'IT';
+                            if (b.includes('Electronics')) return 'ECE';
+                            if (b.includes('Electrical')) return 'EE';
+                            if (b.includes('Mechanical')) return 'ME';
+                            if (b.includes('Civil')) return 'CE';
+                            if (b.includes('Chemical')) return 'ChE';
+                            if (b.includes('Metallurgical')) return 'MME';
+                            return b;
+                          };
+                          return (
+                            <span key={i} className="px-2 py-1 bg-blue-50 text-blue-700 rounded text-xs font-medium">
+                              {abbreviateBranch(branch)}
+                            </span>
+                          );
+                        })}
+                        {job.eligibleBranches.length > 3 && (
+                          <span className="px-2 py-1 text-zinc-400 text-xs">
+                            +{job.eligibleBranches.length - 3}
+                          </span>
+                        )}
+                      </div>
                     </div>
                   )}
                   <div className="flex items-center justify-between text-sm">

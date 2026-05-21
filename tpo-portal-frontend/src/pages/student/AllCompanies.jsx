@@ -82,6 +82,36 @@ const AllCompanies = () => {
                       )}
                     </div>
                   </div>
+                  {job.eligibleBranches && job.eligibleBranches.length > 0 ? (
+                    <div className="flex items-center gap-1">
+                      <span className="text-zinc-400 shrink-0">Branches:</span>
+                      <div className="flex flex-wrap gap-1">
+                        {job.eligibleBranches.slice(0, 3).map((branch, i) => {
+                          const abbreviateBranch = (b) => {
+                            if (b.includes('Computer Science')) return 'CSE';
+                            if (b.includes('Information Technology')) return 'IT';
+                            if (b.includes('Electronics')) return 'ECE';
+                            if (b.includes('Electrical')) return 'EE';
+                            if (b.includes('Mechanical')) return 'ME';
+                            if (b.includes('Civil')) return 'CE';
+                            if (b.includes('Chemical')) return 'ChE';
+                            if (b.includes('Metallurgical')) return 'MME';
+                            return b;
+                          };
+                          return (
+                            <span key={i} className="px-1.5 py-0.5 bg-blue-50 text-blue-700 rounded text-[10px] font-medium">
+                              {abbreviateBranch(branch)}
+                            </span>
+                          );
+                        })}
+                        {job.eligibleBranches.length > 3 && (
+                          <span className="text-[10px] text-zinc-400">+{job.eligibleBranches.length - 3}</span>
+                        )}
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="flex items-center gap-1"><span className="text-zinc-400">Branches:</span> <span className="text-zinc-600">All Branches</span></p>
+                  )}
                   <p className="flex items-center gap-1"><span className="text-zinc-400">Applicants:</span> {job._applicationCount || 0}</p>
                 </div>
 

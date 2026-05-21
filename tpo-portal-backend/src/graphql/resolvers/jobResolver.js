@@ -178,8 +178,7 @@ module.exports = {
           minCgpa: { lte: student.cgpa },
           OR: [
             { eligibleBranches: { isEmpty: true } },
-            { eligibleBranches: { has: student.branch } },
-            { eligibleBranches: null }
+            { eligibleBranches: { has: student.branch } }
           ]
         },
         include: {

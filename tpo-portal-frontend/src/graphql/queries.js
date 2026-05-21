@@ -405,6 +405,7 @@ export const GET_JOBS = gql`
       }
       minCgpa
       requiredSkills
+      eligibleBranches
       status
       jobType
       stipendAmount
@@ -452,6 +453,7 @@ export const GET_ELIGIBLE_JOBS = gql`
       }
       minCgpa
       requiredSkills
+      eligibleBranches
       status
       jobType
       stipendAmount
