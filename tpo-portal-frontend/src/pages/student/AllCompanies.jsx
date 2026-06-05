@@ -1,10 +1,14 @@
 import { useQuery, useMutation } from "@apollo/client";
 import { GET_JOBS, APPLY_FOR_JOB, GET_MY_APPLICATIONS } from "../../graphql/queries";
 import { getSalaryDisplay } from "../../utils/formatCurrency";
+import { useAuth } from "../../context/AuthContext";
 
 const AllCompanies = () => {
+  const { user, activeRole } = useAuth();
+  const isCRCStudentView = user?.role === 'CRC' && activeRole === 'STUDENT';
+
   const { data, loading, refetch } = useQuery(GET_JOBS, {
-    variables: { status: "OPEN" },
+    variables: { status: "OPEN", studentView: isCRCStudentView },
     fetchPolicy: "network-only"
   });
   const { data: applicationsData, refetch: refetchApplications } = useQuery(GET_MY_APPLICATIONS, {

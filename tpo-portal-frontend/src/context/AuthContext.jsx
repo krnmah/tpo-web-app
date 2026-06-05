@@ -30,10 +30,16 @@ export const AuthProvider = ({ children }) => {
   // Initialize state from localStorage immediately (synchronously)
   const [user, setUser] = useState(() => getStoredUser());
   // Active role for CRC users to switch between CRC and Student views
+  // Initialize from localStorage to persist across refreshes
   const [activeRole, setActiveRole] = useState(() => {
     const storedUser = getStoredUser();
-    // For CRC users, default to CRC role, for others use their actual role
-    return storedUser?.role === 'CRC' ? 'CRC' : storedUser?.role || null;
+    const storedActiveRole = localStorage.getItem("activeRole");
+    // For CRC users, use stored activeRole if available, otherwise default to CRC
+    if (storedUser?.role === 'CRC') {
+      return storedActiveRole || 'CRC';
+    }
+    // For non-CRC users, use their actual role
+    return storedUser?.role || null;
   });
   const inactivityTimerRef = useRef(null);
 
@@ -43,7 +49,12 @@ export const AuthProvider = ({ children }) => {
   // Toggle active role for CRC users (between CRC and STUDENT views)
   const toggleRole = useCallback(() => {
     if (user?.role === 'CRC') {
-      setActiveRole(prev => prev === 'CRC' ? 'STUDENT' : 'CRC');
+      setActiveRole(prev => {
+        const newRole = prev === 'CRC' ? 'STUDENT' : 'CRC';
+        // Persist to localStorage
+        localStorage.setItem("activeRole", newRole);
+        return newRole;
+      });
     }
   }, [user?.role]);
 
@@ -52,6 +63,7 @@ export const AuthProvider = ({ children }) => {
     clearAuthData();
     setUser(null);
     setActiveRole(null);
+    localStorage.removeItem("activeRole"); // Clear persisted active role
     if (inactivityTimerRef.current) {
       clearTimeout(inactivityTimerRef.current);
     }
@@ -128,6 +140,18 @@ export const AuthProvider = ({ children }) => {
     window.addEventListener('storage', handleStorageChange);
     return () => window.removeEventListener('storage', handleStorageChange);
   }, []);
+
+  // Redirect CRC users to CRC view if they're on student routes but not in student mode
+  useEffect(() => {
+    if (user?.role === 'CRC' && activeRole === 'CRC') {
+      const currentPath = window.location.pathname;
+      // Check if on student routes
+      if (currentPath.startsWith('/student')) {
+        // Navigate to CRC dashboard
+        window.location.href = '/crc/dashboard';
+      }
+    }
+  }, [user?.role, activeRole]);
 
   const login = async (email, password) => {
     try {

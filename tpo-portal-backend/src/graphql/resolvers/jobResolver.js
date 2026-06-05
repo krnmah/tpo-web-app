@@ -112,18 +112,46 @@ module.exports = {
   },
 
   Query: {
-    jobs: async (_, { status }, { user }) => {
+    jobs: async (_, { status, studentView }, { user }) => {
       authorize(user, ['ADMIN', 'CRC', 'STUDENT']);
 
-      const where = status ? { status } : {};
+      let where = status ? { status } : {};
 
-      return await prisma.job.findMany({
+      // Secure: Only CRC can downgrade to student view, no privilege escalation possible
+      const effectiveRole = user.role === 'CRC' && studentView ? 'STUDENT' : user.role;
+
+      logger.info('Jobs query called', { userId: user.id, userRole: user.role, studentView, effectiveRole, status, where });
+
+      // CRC can only see jobs from their assigned companies (unless in student view)
+      if (effectiveRole === 'CRC') {
+        const assignedCompanies = await prisma.company.findMany({
+          where: { assignedCRC: user.id },
+          select: { id: true }
+        });
+
+        const assignedCompanyIds = assignedCompanies.map(c => c.id);
+
+        if (assignedCompanyIds.length > 0) {
+          where.companyId = { in: assignedCompanyIds };
+        } else {
+          // No companies assigned, return empty result
+          where.companyId = { in: [] };
+        }
+
+        logger.info('CRC job filtering applied', { userId: user.id, companyCount: assignedCompanyIds.length });
+      }
+
+      const jobs = await prisma.job.findMany({
         where,
         include: {
           company: true
         },
         orderBy: { createdAt: 'desc' }
       });
+
+      logger.info('Jobs query result', { userId: user.id, userRole: user.role, effectiveRole, jobCount: jobs.length });
+
+      return jobs;
     },
 
     job: async (_, { id }, { user }) => {
@@ -164,11 +192,14 @@ module.exports = {
       // Both STUDENT and CRC can see eligible jobs (CRC is also a student)
       authorize(user, ['STUDENT', 'CRC']);
 
+      logger.info('EligibleJobs query called', { userId: user.id, userRole: user.role });
+
       const student = await prisma.user.findUnique({
         where: { id: user.id }
       });
 
       if (!student || student.cgpa === null) {
+        logger.info('EligibleJobs: No CGPA, returning empty', { userId: user.id });
         return [];
       }
 
@@ -186,6 +217,8 @@ module.exports = {
         },
         orderBy: { createdAt: 'desc' }
       });
+
+      logger.info('EligibleJobs result', { userId: user.id, userRole: user.role, jobCount: jobs.length });
 
       return jobs;
     }

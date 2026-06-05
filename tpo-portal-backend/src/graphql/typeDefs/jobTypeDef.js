@@ -58,7 +58,7 @@ input UpdateJobInput {
 }
 
 extend type Query {
-  jobs(status: JobStatus): [Job!]!
+  jobs(status: JobStatus, studentView: Boolean): [Job!]!
   job(id: ID!): Job
   jobsByCompany(companyId: ID!): [Job!]!
   eligibleJobs: [Job!]!

@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@apollo/client";
 import { useAuth } from "../../context/AuthContext";
+import { client } from "../../graphql/client";
 import { useNavigate } from "react-router-dom";
 import { useConfirm } from "../../components/ConfirmDialog";
 import { GET_MY_ASSIGNED_COMPANIES } from "../../graphql/queries";
@@ -32,8 +33,8 @@ const CRCDashboard = () => {
   const navigate = useNavigate();
   const confirm = useConfirm();
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState("overview");
-  const [selectedCompany, setSelectedCompany] = useState(null);
+  const [activeTab, setActiveTab] = useState("dashboard");
+  const [applicationsModalState, setApplicationsModalState] = useState({ isOpen: false, companyId: null, companyName: '' });
   const [showJobForm, setShowJobForm] = useState(false);
   const [editingJob, setEditingJob] = useState(null);
   const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
@@ -41,6 +42,7 @@ const CRCDashboard = () => {
   const [showCompanyForm, setShowCompanyForm] = useState(false);
   const [newCompany, setNewCompany] = useState({ name: "", description: "" });
   const [skillsInput, setSkillsInput] = useState("");
+  const [companyApplicationCounts, setCompanyApplicationCounts] = useState({});
 
   const handleLogout = async () => {
     const confirmed = await confirm(
@@ -59,11 +61,38 @@ const CRCDashboard = () => {
     fetchPolicy: "network-only"
   });
   const { data: allJobsData, refetch: refetchJobs } = useQuery(GET_JOBS, {
+    variables: { studentView: isStudentMode },
     fetchPolicy: "network-only"
   });
 
   const companies = companiesData?.myCompanies || [];
   const jobs = allJobsData?.jobs || [];
+
+  // Fetch application counts for each company
+  useEffect(() => {
+    const fetchApplicationCounts = async () => {
+      const counts = {};
+      await Promise.all(
+        companies.map(async (company) => {
+          try {
+            const { data } = await client.query({
+              query: GET_APPLICATIONS_BY_COMPANY,
+              variables: { companyId: company.id },
+              fetchPolicy: 'network-only'
+            });
+            counts[company.id] = data?.applicationsByCompany?.length || 0;
+          } catch {
+            counts[company.id] = 0;
+          }
+        })
+      );
+      setCompanyApplicationCounts(counts);
+    };
+
+    if (companies.length > 0) {
+      fetchApplicationCounts();
+    }
+  }, [companies]);
 
   // Mutations
   const [createJob] = useMutation(CREATE_JOB);
@@ -387,7 +416,7 @@ const CRCDashboard = () => {
   };
 
   const navLinks = [
-    { name: "Overview", tab: "overview", icon: <LayoutDashboard className="w-4 h-4" /> },
+    { name: "Dashboard", tab: "dashboard", icon: <LayoutDashboard className="w-4 h-4" /> },
     { name: "My Companies", tab: "companies", icon: <Building2 className="w-4 h-4" /> },
     { name: "Manage Jobs", tab: "jobs", icon: <Briefcase className="w-4 h-4" /> },
     { name: "Applications", tab: "applications", icon: <FileText className="w-4 h-4" /> },
@@ -529,11 +558,11 @@ const CRCDashboard = () => {
         </header>
 
         <div className={`p-4 sm:p-6 lg:p-8 transition-transform duration-300 ease-in-out ${mobileSidebarOpen ? 'translate-x-60' : ''}`}>
-        {/* Overview Tab */}
-        {activeTab === "overview" && (
+        {/* Dashboard Tab */}
+        {activeTab === "dashboard" && (
           <div className="space-y-6">
             <div>
-              <h1 className="text-2xl font-semibold text-zinc-900 tracking-tight">Overview</h1>
+              <h1 className="text-2xl font-semibold text-zinc-900 tracking-tight">Dashboard</h1>
               <p className="text-sm text-zinc-500 mt-1">Training & Placement Department · NIT Srinagar</p>
             </div>
 
@@ -1029,20 +1058,28 @@ const CRCDashboard = () => {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {companies.map((company) => (
-                <button
-                  key={company.id}
-                  onClick={() => setSelectedCompany(company.id)}
-                  className={`p-5 bg-white border rounded-xl text-left transition-all ${
-                    selectedCompany === company.id
-                      ? "border-indigo-600 shadow-md shadow-indigo-200 ring-2 ring-indigo-100"
-                      : "border-slate-100 hover:border-slate-200"
-                  }`}
-                >
-                  <p className="text-sm font-semibold text-slate-900">{company.name}</p>
-                  <p className="text-xs text-slate-500 mt-1">View applications</p>
-                </button>
-              ))}
+              {companies.map((company) => {
+                const count = companyApplicationCounts[company.id] ?? 0;
+                return (
+                  <button
+                    key={company.id}
+                    onClick={() => setApplicationsModalState({ isOpen: true, companyId: company.id, companyName: company.name })}
+                    className="p-5 bg-white border border-slate-100 rounded-xl text-left transition-all hover:border-slate-200 hover:shadow-md cursor-pointer"
+                  >
+                    <div className="flex items-start justify-between">
+                      <p className="text-sm font-semibold text-slate-900">{company.name}</p>
+                      <span className={`flex items-center justify-center min-w-[20px] h-5 px-1.5 text-xs font-medium rounded-full ${
+                        count > 0
+                          ? 'bg-indigo-50 text-indigo-600'
+                          : 'bg-slate-100 text-slate-500'
+                      }`}>
+                        {count}
+                      </span>
+                    </div>
+                    <p className="text-xs text-slate-500 mt-1">View applications</p>
+                  </button>
+                );
+              })}
               {companies.length === 0 && (
                 <div className="col-span-full bg-white border border-slate-100 rounded-xl p-12 text-center">
                   <FileText className="w-12 h-12 text-slate-300 mx-auto mb-4" />
@@ -1050,13 +1087,6 @@ const CRCDashboard = () => {
                 </div>
               )}
             </div>
-
-            {selectedCompany && (
-              <CompanyApplications
-                companyId={selectedCompany}
-                updateApplicationStatus={updateApplicationStatus}
-              />
-            )}
           </div>
         )}
         </div>
@@ -1080,6 +1110,16 @@ const CRCDashboard = () => {
             <span className="text-sm font-medium text-white">{toast.message}</span>
           </div>
         </div>
+      )}
+
+      {/* Company Applications Modal */}
+      {applicationsModalState.isOpen && (
+        <CompanyApplicationsModal
+          companyId={applicationsModalState.companyId}
+          companyName={applicationsModalState.companyName}
+          onClose={() => setApplicationsModalState({ isOpen: false, companyId: null, companyName: '' })}
+          updateApplicationStatus={updateApplicationStatus}
+        />
       )}
     </div>
   );
@@ -1350,6 +1390,37 @@ const CompanyApplications = ({ companyId, updateApplicationStatus }) => {
         />
       )}
     </>
+  );
+};
+
+const CompanyApplicationsModal = ({ companyId, companyName, onClose, updateApplicationStatus }) => {
+  if (!companyId) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose}></div>
+      <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-5xl max-h-[90vh] overflow-hidden flex flex-col">
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 py-4 border-b border-zinc-100 bg-white">
+          <div>
+            <h2 className="text-lg font-semibold text-zinc-900">{companyName}</h2>
+            <p className="text-sm text-zinc-500">Applications</p>
+          </div>
+          <button
+            onClick={onClose}
+            className="p-2 text-zinc-400 hover:text-zinc-600 hover:bg-zinc-100 rounded-lg transition-colors"
+            aria-label="Close modal"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        {/* Content - CompanyApplications component */}
+        <div className="flex-1 overflow-y-auto">
+          <CompanyApplications companyId={companyId} updateApplicationStatus={updateApplicationStatus} />
+        </div>
+      </div>
+    </div>
   );
 };
 

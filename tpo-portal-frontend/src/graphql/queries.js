@@ -394,8 +394,8 @@ export const CREATE_MY_COMPANY = gql`
 // ==================== JOB QUERIES ====================
 
 export const GET_JOBS = gql`
-  query GetJobs($status: JobStatus) {
-    jobs(status: $status) {
+  query GetJobs($status: JobStatus, $studentView: Boolean) {
+    jobs(status: $status, studentView: $studentView) {
       id
       title
       description
