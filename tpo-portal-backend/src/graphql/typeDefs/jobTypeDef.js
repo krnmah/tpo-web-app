@@ -70,5 +70,6 @@ extend type Mutation {
   updateJob(id: ID!, input: UpdateJobInput!): Job!
   deleteJob(id: ID!): Boolean!
   closeJob(id: ID!): Job!
+  reopenJob(id: ID!): Job!
 }
 `;

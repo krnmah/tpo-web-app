@@ -3,10 +3,23 @@ import { useState } from "react";
 import { GET_JOBS, APPLY_FOR_JOB, GET_MY_APPLICATIONS } from "../../graphql/queries";
 import { getSalaryDisplay } from "../../utils/formatCurrency";
 import { useAuth } from "../../context/AuthContext";
+import { BRANCHES } from "../../constants/branches";
+import JobDetailsModal from "../../components/JobDetailsModal";
+
+const JOB_TYPE_OPTIONS = [
+  { value: "INTERN_ONLY", label: "Intern Only" },
+  { value: "INTERN_PPO", label: "Intern + PPO" },
+  { value: "INTERN_FTE", label: "Intern + FTE" },
+  { value: "FTE_ONLY", label: "FTE Only" },
+];
 
 const AllCompanies = () => {
   const { user, activeRole } = useAuth();
   const [errorMessage, setErrorMessage] = useState("");
+  const [searchJob, setSearchJob] = useState("");
+  const [selectedBranch, setSelectedBranch] = useState("All");
+  const [selectedJobType, setSelectedJobType] = useState("All");
+  const [selectedJob, setSelectedJob] = useState(null);
   const isCRCStudentView = user?.role === 'CRC' && activeRole === 'STUDENT';
 
   const { data, loading, refetch } = useQuery(GET_JOBS, {
@@ -42,10 +55,68 @@ const AllCompanies = () => {
   }
 
   const jobs = data?.jobs || [];
+  const searchQuery = searchJob.trim().toLowerCase();
+  const filteredJobs = jobs.filter((job) => {
+    const searchMatch = !searchQuery ||
+      job.title?.toLowerCase().includes(searchQuery) ||
+      job.company?.name?.toLowerCase().includes(searchQuery);
+    const branchMatch = selectedBranch === "All" ||
+      !job.eligibleBranches?.length ||
+      job.eligibleBranches.includes(selectedBranch);
+    const jobTypeMatch = selectedJobType === "All" || job.jobType === selectedJobType;
+
+    return searchMatch && branchMatch && jobTypeMatch;
+  });
+
+  const selectedJobApplied = selectedJob ? appliedJobIds.includes(String(selectedJob.id)) : false;
+  const selectedJobEligible = selectedJob ? Boolean(selectedJob._isEligible) : false;
 
   return (
     <div>
       <h1 className="text-2xl font-bold text-gray-800 mb-6">All Companies & Jobs</h1>
+      <div className="mb-5 flex flex-col gap-3 rounded-xl border border-zinc-100 bg-white p-4 shadow-sm lg:flex-row lg:items-center">
+        <div className="relative flex-1">
+          <input
+            type="text"
+            placeholder="Search role or company..."
+            value={searchJob}
+            onChange={(e) => setSearchJob(e.target.value)}
+            className="w-full rounded-lg border border-zinc-300 bg-white py-2 pl-9 pr-8 text-sm placeholder-zinc-400 focus:border-zinc-900 focus:outline-none focus:ring-2 focus:ring-zinc-200"
+          />
+          <svg className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+          </svg>
+          {searchJob && (
+            <button
+              onClick={() => setSearchJob("")}
+              className="absolute right-2 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600"
+              aria-label="Clear job search"
+            >
+              x
+            </button>
+          )}
+        </div>
+        <select
+          value={selectedBranch}
+          onChange={(e) => setSelectedBranch(e.target.value)}
+          className="rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-700 focus:border-zinc-900 focus:outline-none focus:ring-2 focus:ring-zinc-200 lg:w-72"
+        >
+          <option value="All">All Branches</option>
+          {BRANCHES.map((branch) => (
+            <option key={branch} value={branch}>{branch}</option>
+          ))}
+        </select>
+        <select
+          value={selectedJobType}
+          onChange={(e) => setSelectedJobType(e.target.value)}
+          className="rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-700 focus:border-zinc-900 focus:outline-none focus:ring-2 focus:ring-zinc-200 lg:w-44"
+        >
+          <option value="All">All Types</option>
+          {JOB_TYPE_OPTIONS.map((type) => (
+            <option key={type.value} value={type.value}>{type.label}</option>
+          ))}
+        </select>
+      </div>
       {errorMessage && (
         <div className="mb-4 rounded-lg border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-700">
           {errorMessage}
@@ -55,14 +126,30 @@ const AllCompanies = () => {
         <div className="bg-white p-6 rounded-lg shadow">
           <p className="text-gray-500">No open jobs available at the moment.</p>
         </div>
+      ) : filteredJobs.length === 0 ? (
+        <div className="bg-white p-6 rounded-lg shadow">
+          <p className="text-gray-500">No jobs match the selected filters.</p>
+        </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {jobs.map((job) => {
+          {filteredJobs.map((job) => {
             const isApplied = appliedJobIds.includes(String(job.id));
             const isEligible = job._isEligible;
 
             return (
-              <div key={job.id} className="bg-white border border-zinc-200 rounded-lg p-4 shadow-sm hover:shadow hover:border-zinc-300 transition">
+              <div
+                key={job.id}
+                onClick={() => setSelectedJob(job)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter" || event.key === " ") {
+                    event.preventDefault();
+                    setSelectedJob(job);
+                  }
+                }}
+                role="button"
+                tabIndex={0}
+                className="bg-white border border-zinc-200 rounded-lg p-4 shadow-sm hover:shadow hover:border-zinc-300 transition cursor-pointer focus:outline-none focus:ring-2 focus:ring-zinc-300"
+              >
                 <div className="flex items-start justify-between gap-2 mb-3">
                   <div className="min-w-0 flex-1">
                     <h3 className="text-sm font-semibold text-zinc-900 truncate">{job.title}</h3>
@@ -140,23 +227,29 @@ const AllCompanies = () => {
                 )}
 
                 <button
-                  onClick={() => handleApply(job.id)}
-                  disabled={isApplied || !isEligible}
-                  className={`w-full py-1.5 text-sm rounded-md font-medium transition ${
-                    isApplied
-                      ? "bg-zinc-100 text-zinc-400 cursor-not-allowed"
-                      : !isEligible
-                      ? "bg-zinc-50 text-zinc-300 cursor-not-allowed"
-                      : "bg-zinc-900 text-white hover:bg-zinc-800"
-                  }`}
+                  type="button"
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    setSelectedJob(job);
+                  }}
+                  className="w-full py-1.5 text-sm rounded-md font-medium transition bg-zinc-900 text-white hover:bg-zinc-800"
                 >
-                  {isApplied ? "✓ Applied" : !isEligible ? "Not Eligible" : "Apply"}
+                  {isApplied ? "View Applied Job" : !isEligible ? "View Details" : "View Details"}
                 </button>
               </div>
             );
           })}
         </div>
       )}
+
+      <JobDetailsModal
+        job={selectedJob}
+        isOpen={Boolean(selectedJob)}
+        onClose={() => setSelectedJob(null)}
+        onApply={handleApply}
+        isApplied={selectedJobApplied}
+        isEligible={selectedJobEligible}
+      />
     </div>
   );
 };

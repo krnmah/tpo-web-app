@@ -496,6 +496,7 @@ export const GET_ELIGIBLE_JOBS = gql`
       ppoAmount
       ctcAmount
       createdAt
+      updatedAt
       _applicationCount
     }
   }
@@ -555,6 +556,16 @@ export const CLOSE_JOB = gql`
   }
 `;
 
+export const REOPEN_JOB = gql`
+  mutation ReopenJob($id: ID!) {
+    reopenJob(id: $id) {
+      id
+      title
+      status
+    }
+  }
+`;
+
 export const DELETE_JOB = gql`
   mutation DeleteJob($id: ID!) {
     deleteJob(id: $id)
@@ -598,10 +609,21 @@ export const GET_APPLICATIONS_BY_JOB = gql`
         email
         enrollmentNumber
         cgpa
+        skills
+        branch
+        mobile
+        category
+        gender
+        resumeUrl
+        reportCardUrl
+        categoryCertificateUrl
+        domicileUrl
+        personalEmail
       }
       job {
         id
         title
+        minCgpa
       }
       status
       createdAt

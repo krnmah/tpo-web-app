@@ -74,6 +74,9 @@ function validateJobSalaryFields(data) {
 
 module.exports = {
   Job: {
+    createdAt: (job) => job.createdAt?.toISOString?.() || job.createdAt || null,
+    updatedAt: (job) => job.updatedAt?.toISOString?.() || job.updatedAt || null,
+
     company: async (job, _, __) => {
       return await prisma.company.findUnique({
         where: { id: job.companyId }
@@ -529,6 +532,35 @@ module.exports = {
       });
 
       logAudit.dataAccess(user.id, `job_close_${id}`);
+
+      return updated;
+    },
+
+    reopenJob: async (_, { id }, { user }) => {
+      authorize(user, ['ADMIN', 'CRC']);
+
+      const existing = await prisma.job.findUnique({
+        where: { id: parseInt(id) }
+      });
+
+      if (!existing) {
+        throw new Error('Job not found');
+      }
+
+      // CRC can only reopen jobs from their assigned companies
+      if (user.role === 'CRC') {
+        await crcCompanyCheck(user, existing.companyId);
+      }
+
+      const updated = await prisma.job.update({
+        where: { id: parseInt(id) },
+        data: { status: 'OPEN' },
+        include: {
+          company: true
+        }
+      });
+
+      logAudit.dataAccess(user.id, `job_reopen_${id}`);
 
       return updated;
     }

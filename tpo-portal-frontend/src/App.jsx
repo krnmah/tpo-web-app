@@ -1,5 +1,5 @@
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
-import { lazy, Suspense } from "react";
+import { lazy, Suspense, useEffect } from "react";
 import { useAuth } from "./context/AuthContext";
 import { AuthProvider } from "./context/AuthContext";
 import { ConfirmDialogProvider } from "./components/ConfirmDialog";
@@ -21,6 +21,38 @@ const CRCDashboardHome = lazy(() => import("./pages/crc/CRCDashboardHome"));
 const CRCCompaniesPage = lazy(() => import("./pages/crc/CRCCompaniesPage"));
 const CRCJobsPage = lazy(() => import("./pages/crc/CRCJobsPage"));
 const CRCApplicationsPage = lazy(() => import("./pages/crc/CRCApplicationsPage"));
+
+const APP_TITLE = "T&P NITSRI";
+
+const PAGE_TITLES = {
+  "/home": "Home",
+  "/about": "About",
+  "/team": "Team",
+  "/contact": "Contact",
+  "/auth": "Login",
+  "/student/dashboard": "Dashboard",
+  "/student/profile": "Profile",
+  "/student/all-jobs": "All Jobs",
+  "/student/eligible-companies": "Eligible Jobs",
+  "/student/applications": "Applications",
+  "/student/noc": "NOC",
+  "/crc/dashboard": "CRC Dashboard",
+  "/crc/companies": "My Companies",
+  "/crc/jobs": "Manage Jobs",
+  "/crc/applications": "Applications",
+  "/admin/dashboard": "Admin Dashboard",
+  "/admin/users": "Users",
+  "/admin/companies": "Companies",
+  "/admin/crc": "CRC Management",
+  "/admin/stats": "Stats",
+};
+
+const getDocumentTitle = (pathname) => {
+  const normalizedPath = pathname.replace(/\/+$/, "") || "/home";
+  const pageTitle = PAGE_TITLES[normalizedPath];
+
+  return pageTitle ? `${pageTitle} - ${APP_TITLE}` : APP_TITLE;
+};
 
 function PageFallback() {
   return (
@@ -70,6 +102,12 @@ function ProtectedRoute({ children, allowedRoles }) {
 }
 
 function AppRoutes() {
+  const location = useLocation();
+
+  useEffect(() => {
+    document.title = getDocumentTitle(location.pathname);
+  }, [location.pathname]);
+
   return (
     <Suspense fallback={<PageFallback />}>
       <Routes>

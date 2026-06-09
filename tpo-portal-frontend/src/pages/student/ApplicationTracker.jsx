@@ -1,4 +1,5 @@
 import { useQuery } from "@apollo/client";
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import { GET_MY_APPLICATIONS } from "../../graphql/queries";
 import {
@@ -19,12 +20,27 @@ const getStatusBadge = (status) => {
   return styles[status] || styles.APPLIED;
 };
 
+const STATUS_OPTIONS = ["APPLIED", "SHORTLISTED", "SELECTED", "REJECTED"];
+
 const ApplicationTracker = () => {
+  const [searchApplication, setSearchApplication] = useState("");
+  const [selectedStatus, setSelectedStatus] = useState("All");
   const { data, loading, error } = useQuery(GET_MY_APPLICATIONS, {
     fetchPolicy: "network-only"
   });
 
   const applications = data?.myApplications || [];
+  const searchQuery = searchApplication.trim().toLowerCase();
+  const filteredApplications = applications.filter((app) => {
+    const companyName = app.company?.name || app.job?.company?.name || "";
+    const role = app.job?.title || "";
+    const searchMatch = !searchQuery ||
+      companyName.toLowerCase().includes(searchQuery) ||
+      role.toLowerCase().includes(searchQuery);
+    const statusMatch = selectedStatus === "All" || app.status === selectedStatus;
+
+    return searchMatch && statusMatch;
+  });
 
   return (
     <div className="space-y-6">
@@ -32,6 +48,41 @@ const ApplicationTracker = () => {
       <div>
         <h1 className="text-2xl font-semibold text-zinc-900 tracking-tight">Applications</h1>
         <p className="text-sm text-zinc-500 mt-1">Track your job application status</p>
+      </div>
+
+      <div className="flex flex-col gap-3 rounded-xl border border-zinc-100 bg-white p-4 shadow-sm md:flex-row md:items-center">
+        <div className="relative flex-1">
+          <input
+            type="text"
+            placeholder="Search company or role..."
+            value={searchApplication}
+            onChange={(e) => setSearchApplication(e.target.value)}
+            className="w-full rounded-lg border border-zinc-300 bg-white py-2 pl-9 pr-8 text-sm placeholder-zinc-400 focus:border-zinc-900 focus:outline-none focus:ring-2 focus:ring-zinc-200"
+          />
+          <svg className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+          </svg>
+          {searchApplication && (
+            <button
+              type="button"
+              onClick={() => setSearchApplication("")}
+              className="absolute right-2 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600"
+              aria-label="Clear application search"
+            >
+              x
+            </button>
+          )}
+        </div>
+        <select
+          value={selectedStatus}
+          onChange={(e) => setSelectedStatus(e.target.value)}
+          className="rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-700 focus:border-zinc-900 focus:outline-none focus:ring-2 focus:ring-zinc-200 md:w-48"
+        >
+          <option value="All">All Statuses</option>
+          {STATUS_OPTIONS.map((status) => (
+            <option key={status} value={status}>{status}</option>
+          ))}
+        </select>
       </div>
 
       {/* Empty State */}
@@ -46,6 +97,12 @@ const ApplicationTracker = () => {
           >
             Browse Jobs <ArrowRight className="w-4 h-4" />
           </Link>
+        </div>
+      ) : filteredApplications.length === 0 && !loading && !error ? (
+        <div className="bg-white border border-zinc-100 rounded-xl p-12 text-center">
+          <FileText className="w-12 h-12 text-zinc-300 mx-auto mb-4" />
+          <h3 className="text-lg font-medium text-zinc-900 mb-2">No applications match the selected filters</h3>
+          <p className="text-sm text-zinc-500">Try changing the search or status filter.</p>
         </div>
       ) : (
         /* Applications List */
@@ -67,7 +124,7 @@ const ApplicationTracker = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-zinc-100">
-                {applications.map((app) => (
+                {filteredApplications.map((app) => (
                   <tr key={app.id} className="hover:bg-zinc-50 transition-colors">
                     <td className="px-5 py-4">
                       <div className="flex items-center gap-3">
@@ -114,7 +171,7 @@ const ApplicationTracker = () => {
           {/* Mobile Card View */}
           <div className="md:hidden p-4 space-y-3">
             <h3 className="text-sm font-semibold text-zinc-900 px-1">Application History</h3>
-            {applications.map((app) => (
+            {filteredApplications.map((app) => (
               <div key={app.id} className="border border-zinc-200 rounded-xl p-4 bg-white">
                 <div className="flex items-start gap-3 mb-3">
                   <div className="w-10 h-10 rounded-lg bg-zinc-100 flex items-center justify-center text-zinc-600 flex-shrink-0">

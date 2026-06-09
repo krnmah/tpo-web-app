@@ -4,8 +4,8 @@ import { useAuth } from "../../context/AuthContext";
 import { NavLink, useNavigate } from "react-router-dom";
 import { useConfirm } from "../../components/ConfirmDialog";
 import { GET_MY_ASSIGNED_COMPANIES } from "../../graphql/queries";
-import { GET_JOBS, CREATE_JOB, CLOSE_JOB, UPDATE_JOB, DELETE_JOB } from "../../graphql/queries";
-import { GET_APPLICATIONS_BY_COMPANY, UPDATE_APPLICATION_STATUS } from "../../graphql/queries";
+import { GET_JOBS, CREATE_JOB, CLOSE_JOB, REOPEN_JOB, UPDATE_JOB, DELETE_JOB } from "../../graphql/queries";
+import { GET_APPLICATIONS_BY_JOB, UPDATE_APPLICATION_STATUS } from "../../graphql/queries";
 import { CREATE_MY_COMPANY } from "../../graphql/queries";
 import { getSalaryDisplay, getRequiredFields, validateSalaryFields } from "../../utils/formatCurrency";
 import { BRANCHES } from "../../constants/branches";
@@ -28,12 +28,32 @@ import {
   Menu,
 } from "../../components/Icons";
 
+const JOB_TYPE_OPTIONS = [
+  { value: "INTERN_ONLY", label: "Intern Only" },
+  { value: "INTERN_PPO", label: "Intern + PPO" },
+  { value: "INTERN_FTE", label: "Intern + FTE" },
+  { value: "FTE_ONLY", label: "FTE Only" },
+];
+
+const EMPTY_JOB_FORM = {
+  title: "",
+  companyId: "",
+  description: "",
+  minCgpa: "",
+  requiredSkills: [],
+  eligibleBranches: [],
+  jobType: "INTERN_ONLY",
+  stipendAmount: "",
+  ppoAmount: "",
+  ctcAmount: ""
+};
+
 const CRCDashboard = ({ activeTab = "dashboard" }) => {
   const { user, activeRole, toggleRole, logout } = useAuth();
   const navigate = useNavigate();
   const confirm = useConfirm();
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
-  const [applicationsModalState, setApplicationsModalState] = useState({ isOpen: false, companyId: null, companyName: '' });
+  const [applicationsModalState, setApplicationsModalState] = useState({ isOpen: false, jobId: null, jobTitle: '', companyName: '' });
   const [showJobForm, setShowJobForm] = useState(false);
   const [editingJob, setEditingJob] = useState(null);
   const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
@@ -41,6 +61,10 @@ const CRCDashboard = ({ activeTab = "dashboard" }) => {
   const [showCompanyForm, setShowCompanyForm] = useState(false);
   const [newCompany, setNewCompany] = useState({ name: "", description: "" });
   const [skillsInput, setSkillsInput] = useState("");
+  const [jobSearch, setJobSearch] = useState("");
+  const [selectedJobTypeFilter, setSelectedJobTypeFilter] = useState("All");
+  const [applicationSearch, setApplicationSearch] = useState("");
+  const [applicationJobTypeFilter, setApplicationJobTypeFilter] = useState("All");
 
   const handleLogout = async () => {
     const confirmed = await confirm(
@@ -65,28 +89,43 @@ const CRCDashboard = ({ activeTab = "dashboard" }) => {
 
   const companies = companiesData?.myCompanies || [];
   const jobs = allJobsData?.jobs || [];
+  const jobSearchQuery = jobSearch.trim().toLowerCase();
+  const filteredJobs = jobs.filter((job) => {
+    const searchMatch = !jobSearchQuery ||
+      job.title?.toLowerCase().includes(jobSearchQuery) ||
+      job.company?.name?.toLowerCase().includes(jobSearchQuery);
+    const typeMatch = selectedJobTypeFilter === "All" || job.jobType === selectedJobTypeFilter;
+
+    return searchMatch && typeMatch;
+  });
+  const applicationSearchQuery = applicationSearch.trim().toLowerCase();
+  const filteredApplicationJobs = jobs.filter((job) => {
+    const searchMatch = !applicationSearchQuery ||
+      job.title?.toLowerCase().includes(applicationSearchQuery) ||
+      job.company?.name?.toLowerCase().includes(applicationSearchQuery);
+    const typeMatch = applicationJobTypeFilter === "All" || job.jobType === applicationJobTypeFilter;
+
+    return searchMatch && typeMatch;
+  });
 
   // Mutations
   const [createJob] = useMutation(CREATE_JOB);
   const [closeJob] = useMutation(CLOSE_JOB);
+  const [reopenJob] = useMutation(REOPEN_JOB);
   const [updateJob] = useMutation(UPDATE_JOB);
   const [deleteJob] = useMutation(DELETE_JOB);
   const [updateApplicationStatus] = useMutation(UPDATE_APPLICATION_STATUS);
   const [createMyCompany] = useMutation(CREATE_MY_COMPANY);
 
+  const openCreateJobModal = () => {
+    setEditingJob(null);
+    setNewJob(EMPTY_JOB_FORM);
+    setSkillsInput("");
+    setShowJobForm(true);
+  };
+
   // Forms
-  const [newJob, setNewJob] = useState({
-    title: "",
-    companyId: "",
-    description: "",
-    minCgpa: "",
-    requiredSkills: [],
-    eligibleBranches: [],
-    jobType: "INTERN_ONLY",
-    stipendAmount: "",
-    ppoAmount: "",
-    ctcAmount: ""
-  });
+  const [newJob, setNewJob] = useState(EMPTY_JOB_FORM);
 
   const handleCreateJob = async (e) => {
     e.preventDefault();
@@ -162,18 +201,7 @@ const CRCDashboard = ({ activeTab = "dashboard" }) => {
         setTimeout(() => setToast({ ...toast, show: false }), 3000);
         return;
       }
-      setNewJob({
-        title: "",
-        companyId: "",
-        description: "",
-        minCgpa: "",
-        requiredSkills: [],
-        eligibleBranches: [],
-        jobType: "INTERN_ONLY",
-        stipendAmount: "",
-        ppoAmount: "",
-        ctcAmount: ""
-      });
+      setNewJob(EMPTY_JOB_FORM);
       setSkillsInput("");
       setShowJobForm(false);
       refetchJobs();
@@ -266,18 +294,7 @@ const CRCDashboard = ({ activeTab = "dashboard" }) => {
         }
       });
       setEditingJob(null);
-      setNewJob({
-        title: "",
-        companyId: "",
-        description: "",
-        minCgpa: "",
-        requiredSkills: [],
-        eligibleBranches: [],
-        jobType: "INTERN_ONLY",
-        stipendAmount: "",
-        ppoAmount: "",
-        ctcAmount: ""
-      });
+      setNewJob(EMPTY_JOB_FORM);
       setSkillsInput("");
       setShowJobForm(false);
       refetchJobs();
@@ -294,18 +311,7 @@ const CRCDashboard = ({ activeTab = "dashboard" }) => {
 
   const handleCancelEdit = () => {
     setEditingJob(null);
-    setNewJob({
-      title: "",
-      companyId: "",
-      description: "",
-      minCgpa: "",
-      requiredSkills: [],
-      eligibleBranches: [],
-      jobType: "INTERN_ONLY",
-      stipendAmount: "",
-      ppoAmount: "",
-      ctcAmount: ""
-    });
+    setNewJob(EMPTY_JOB_FORM);
     setSkillsInput("");
     setShowJobForm(false);
   };
@@ -372,6 +378,36 @@ const CRCDashboard = ({ activeTab = "dashboard" }) => {
         setToast({ show: true, message: err.message || 'Failed to delete job', type: 'error' });
         setTimeout(() => setToast({ ...toast, show: false }), 3000);
       }
+    }
+  };
+
+  const handleCloseJob = async (job) => {
+    const confirmed = await confirm("Close this job?", "Confirm Action", "crc");
+    if (!confirmed) return;
+
+    try {
+      await closeJob({ variables: { id: job.id } });
+      await refetchJobs();
+      setToast({ show: true, message: 'Job closed successfully', type: 'success' });
+      setTimeout(() => setToast({ show: false, message: '', type: 'success' }), 3000);
+    } catch (err) {
+      setToast({ show: true, message: err.message || 'Failed to close job', type: 'error' });
+      setTimeout(() => setToast({ show: false, message: '', type: 'success' }), 3000);
+    }
+  };
+
+  const handleReopenJob = async (job) => {
+    const confirmed = await confirm("Reopen this job?", "Confirm Action", "crc");
+    if (!confirmed) return;
+
+    try {
+      await reopenJob({ variables: { id: job.id } });
+      await refetchJobs();
+      setToast({ show: true, message: 'Job reopened successfully', type: 'success' });
+      setTimeout(() => setToast({ show: false, message: '', type: 'success' }), 3000);
+    } catch (err) {
+      setToast({ show: true, message: err.message || 'Failed to reopen job', type: 'error' });
+      setTimeout(() => setToast({ show: false, message: '', type: 'success' }), 3000);
     }
   };
 
@@ -609,64 +645,6 @@ const CRCDashboard = ({ activeTab = "dashboard" }) => {
               </button>
             </div>
 
-            {/* Company Creation Form */}
-            {showCompanyForm && (
-              <div className="bg-gradient-to-br from-white to-indigo-50/30 rounded-xl shadow-md border border-indigo-100 overflow-hidden">
-                <div className="flex items-center justify-between px-5 py-4 bg-gradient-to-r from-indigo-600 to-indigo-500">
-                  <h3 className="text-sm font-semibold text-white">Create New Company</h3>
-                  <button
-                    onClick={() => setShowCompanyForm(false)}
-                    className="p-1.5 text-white/80 hover:text-white hover:bg-white/20 rounded-lg transition-all"
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
-                </div>
-                <form onSubmit={handleCreateCompany} className="p-5 space-y-4">
-                  <div>
-                    <label className="block text-xs font-medium text-zinc-600 mb-1.5">Company Name *</label>
-                    <input
-                      type="text"
-                      placeholder="e.g., Google, Microsoft, Amazon"
-                      value={newCompany.name}
-                      onChange={(e) => setNewCompany({ ...newCompany, name: e.target.value })}
-                      className="w-full px-3 py-2.5 border border-zinc-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all placeholder:text-zinc-400"
-                      required
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium text-zinc-600 mb-1.5">Description *</label>
-                    <textarea
-                      placeholder="Brief description about the company, industry, type of work..."
-                      value={newCompany.description}
-                      onChange={(e) => setNewCompany({ ...newCompany, description: e.target.value })}
-                      className="w-full px-3 py-2.5 border border-zinc-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 resize-none transition-all placeholder:text-zinc-400"
-                      rows="3"
-                      required
-                    />
-                  </div>
-                  <div className="flex items-center justify-end gap-3 pt-2">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setShowCompanyForm(false);
-                        setNewCompany({ name: "", description: "" });
-                      }}
-                      className="px-5 py-2.5 text-sm font-medium text-zinc-600 hover:text-zinc-800 hover:bg-zinc-100 rounded-xl transition-all"
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      type="submit"
-                      className="flex items-center gap-2 px-6 py-2.5 bg-gradient-to-r from-indigo-600 to-indigo-500 text-white text-sm font-medium rounded-xl hover:from-indigo-700 hover:to-indigo-600 shadow-lg shadow-indigo-500/30 hover:shadow-xl hover:shadow-indigo-500/40 transition-all"
-                    >
-                      <Plus className="w-4 h-4" />
-                      Create Company
-                    </button>
-                  </div>
-                </form>
-              </div>
-            )}
-
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {companies.map((company) => (
                 <div key={company.id} className="bg-white border border-slate-100 rounded-xl p-5 hover:border-slate-200 transition-colors">
@@ -704,7 +682,7 @@ const CRCDashboard = ({ activeTab = "dashboard" }) => {
                 <p className="text-sm text-zinc-500 mt-1">Create and manage job postings</p>
               </div>
               <button
-                onClick={() => setShowJobForm(!showJobForm)}
+                onClick={openCreateJobModal}
                 className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition-colors"
               >
                 <Plus className="w-4 h-4" />
@@ -713,14 +691,24 @@ const CRCDashboard = ({ activeTab = "dashboard" }) => {
             </div>
 
             {showJobForm && (
-              <div className="bg-gradient-to-br from-white to-indigo-50/30 rounded-xl shadow-md border border-indigo-100 overflow-hidden">
-                <div className="flex items-center justify-between px-5 py-4 bg-gradient-to-r from-indigo-600 to-indigo-500">
-                  <h3 className="text-sm font-semibold text-white">{editingJob ? 'Edit Job Posting' : 'Post New Job'}</h3>
-                  <button onClick={handleCancelEdit} className="p-1.5 text-white/80 hover:text-white hover:bg-white/20 rounded-lg transition-all">
-                    <X className="w-4 h-4" />
+              <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+                <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={handleCancelEdit} aria-hidden="true" />
+                <div
+                  className="relative flex max-h-[90vh] w-full max-w-4xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl"
+                  role="dialog"
+                  aria-modal="true"
+                  aria-labelledby="job-form-title"
+                >
+                <div className="flex items-center justify-between border-b border-zinc-100 px-5 py-4">
+                  <div>
+                    <h3 id="job-form-title" className="text-lg font-semibold text-zinc-900">{editingJob ? 'Edit Job Posting' : 'Post New Job'}</h3>
+                    <p className="text-sm text-zinc-500">{editingJob ? 'Update this role and eligibility details' : 'Create a new job posting for an assigned company'}</p>
+                  </div>
+                  <button onClick={handleCancelEdit} className="p-2 text-zinc-400 hover:text-zinc-700 hover:bg-zinc-100 rounded-lg transition-all" aria-label="Close job dialog">
+                    <X className="w-5 h-5" />
                   </button>
                 </div>
-                <form onSubmit={editingJob ? handleUpdateJob : handleCreateJob} className="p-5 space-y-4">
+                <form onSubmit={editingJob ? handleUpdateJob : handleCreateJob} className="flex-1 overflow-y-auto p-5 space-y-4">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-xs font-medium text-zinc-600 mb-1.5">Job Title</label>
@@ -905,15 +893,51 @@ const CRCDashboard = ({ activeTab = "dashboard" }) => {
                     </button>
                   </div>
                 </form>
+                </div>
               </div>
             )}
+
+            <div className="flex flex-col gap-3 rounded-xl border border-zinc-100 bg-white p-4 shadow-sm md:flex-row md:items-center">
+              <div className="relative flex-1">
+                <input
+                  type="text"
+                  placeholder="Search company or role..."
+                  value={jobSearch}
+                  onChange={(e) => setJobSearch(e.target.value)}
+                  className="w-full rounded-lg border border-zinc-300 bg-white py-2 pl-9 pr-8 text-sm placeholder-zinc-400 focus:border-indigo-600 focus:outline-none focus:ring-2 focus:ring-indigo-100"
+                />
+                <svg className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+                {jobSearch && (
+                  <button
+                    type="button"
+                    onClick={() => setJobSearch("")}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600"
+                    aria-label="Clear job search"
+                  >
+                    x
+                  </button>
+                )}
+              </div>
+              <select
+                value={selectedJobTypeFilter}
+                onChange={(e) => setSelectedJobTypeFilter(e.target.value)}
+                className="rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-700 focus:border-indigo-600 focus:outline-none focus:ring-2 focus:ring-indigo-100 md:w-48"
+              >
+                <option value="All">All Types</option>
+                {JOB_TYPE_OPTIONS.map((type) => (
+                  <option key={type.value} value={type.value}>{type.label}</option>
+                ))}
+              </select>
+            </div>
 
             <div className="bg-white border border-zinc-100 rounded-xl overflow-hidden">
               <div className="px-5 py-4 border-b border-zinc-100">
                 <h3 className="text-sm font-semibold text-zinc-900">All Jobs</h3>
               </div>
               <div className="divide-y divide-zinc-100">
-                {jobs.map((job) => (
+                {filteredJobs.map((job) => (
                   <div key={job.id} className={`p-5 transition-colors ${editingJob?.id === job.id ? 'bg-indigo-50/50' : 'hover:bg-zinc-50'}`}>
                     <div className="flex items-start justify-between gap-4">
                       <div className="flex-1">
@@ -957,35 +981,14 @@ const CRCDashboard = ({ activeTab = "dashboard" }) => {
                         </button>
                         {job.status === "OPEN" ? (
                           <button
-                            onClick={async () => {
-                              const confirmed = await confirm("Close this job?", "Confirm Action", "crc");
-                              if (confirmed) {
-                                await closeJob({ variables: { id: job.id } });
-                                refetchJobs();
-                                setToast({ show: true, message: 'Job closed successfully', type: 'success' });
-                                setTimeout(() => setToast({ ...toast, show: false }), 3000);
-                              }
-                            }}
+                            onClick={() => handleCloseJob(job)}
                             className="text-xs text-red-600 hover:text-red-700 font-medium px-2 py-1"
                           >
                             Close
                           </button>
                         ) : (
                           <button
-                            onClick={async () => {
-                              const confirmed = await confirm("Reopen this job?", "Confirm Action", "crc");
-                              if (confirmed) {
-                                await updateJob({
-                                  variables: {
-                                    id: job.id,
-                                    input: { status: "OPEN" }
-                                  }
-                                });
-                                refetchJobs();
-                                setToast({ show: true, message: 'Job reopened successfully', type: 'success' });
-                                setTimeout(() => setToast({ ...toast, show: false }), 3000);
-                              }
-                            }}
+                            onClick={() => handleReopenJob(job)}
                             className="text-xs text-emerald-600 hover:text-emerald-700 font-medium px-2 py-1"
                           >
                             Reopen
@@ -1002,6 +1005,12 @@ const CRCDashboard = ({ activeTab = "dashboard" }) => {
                     <p className="text-sm text-zinc-500">No jobs posted yet</p>
                   </div>
                 )}
+                {jobs.length > 0 && filteredJobs.length === 0 && (
+                  <div className="p-12 text-center">
+                    <Briefcase className="w-12 h-12 text-zinc-300 mx-auto mb-4" />
+                    <p className="text-sm text-zinc-500">No jobs match the selected filters.</p>
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -1015,17 +1024,60 @@ const CRCDashboard = ({ activeTab = "dashboard" }) => {
               <p className="text-sm text-zinc-500 mt-1">Review and manage applications</p>
             </div>
 
+            <div className="flex flex-col gap-3 rounded-xl border border-zinc-100 bg-white p-4 shadow-sm md:flex-row md:items-center">
+              <div className="relative flex-1">
+                <input
+                  type="text"
+                  placeholder="Search company or role..."
+                  value={applicationSearch}
+                  onChange={(e) => setApplicationSearch(e.target.value)}
+                  className="w-full rounded-lg border border-zinc-300 bg-white py-2 pl-9 pr-8 text-sm placeholder-zinc-400 focus:border-indigo-600 focus:outline-none focus:ring-2 focus:ring-indigo-100"
+                />
+                <svg className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+                {applicationSearch && (
+                  <button
+                    type="button"
+                    onClick={() => setApplicationSearch("")}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600"
+                    aria-label="Clear application job search"
+                  >
+                    x
+                  </button>
+                )}
+              </div>
+              <select
+                value={applicationJobTypeFilter}
+                onChange={(e) => setApplicationJobTypeFilter(e.target.value)}
+                className="rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-700 focus:border-indigo-600 focus:outline-none focus:ring-2 focus:ring-indigo-100 md:w-48"
+              >
+                <option value="All">All Types</option>
+                {JOB_TYPE_OPTIONS.map((type) => (
+                  <option key={type.value} value={type.value}>{type.label}</option>
+                ))}
+              </select>
+            </div>
+
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {companies.map((company) => {
-                const count = company.applicationCount ?? 0;
+              {filteredApplicationJobs.map((job) => {
+                const count = job._applicationCount ?? 0;
                 return (
                   <button
-                    key={company.id}
-                    onClick={() => setApplicationsModalState({ isOpen: true, companyId: company.id, companyName: company.name })}
+                    key={job.id}
+                    onClick={() => setApplicationsModalState({
+                      isOpen: true,
+                      jobId: job.id,
+                      jobTitle: job.title,
+                      companyName: job.company?.name || 'Company'
+                    })}
                     className="p-5 bg-white border border-slate-100 rounded-xl text-left transition-all hover:border-slate-200 hover:shadow-md cursor-pointer"
                   >
                     <div className="flex items-start justify-between">
-                      <p className="text-sm font-semibold text-slate-900">{company.name}</p>
+                      <div className="min-w-0">
+                        <p className="text-sm font-semibold text-slate-900 truncate">{job.title}</p>
+                        <p className="text-xs text-slate-500 mt-1 truncate">{job.company?.name}</p>
+                      </div>
                       <span className={`flex items-center justify-center min-w-[20px] h-5 px-1.5 text-xs font-medium rounded-full ${
                         count > 0
                           ? 'bg-indigo-50 text-indigo-600'
@@ -1034,14 +1086,32 @@ const CRCDashboard = ({ activeTab = "dashboard" }) => {
                         {count}
                       </span>
                     </div>
-                    <p className="text-xs text-slate-500 mt-1">View applications</p>
+                    <div className="mt-3 flex flex-wrap items-center gap-2">
+                      {job.jobType && (
+                        <span className="rounded-full bg-slate-100 px-2 py-1 text-[11px] font-medium text-slate-600">
+                          {job.jobType.replace(/_/g, ' ')}
+                        </span>
+                      )}
+                      <span className={`rounded-full px-2 py-1 text-[11px] font-medium ${
+                        job.status === "OPEN" ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-700"
+                      }`}>
+                        {job.status}
+                      </span>
+                    </div>
+                    <p className="text-xs text-slate-500 mt-3">View applications for this role</p>
                   </button>
                 );
               })}
-              {companies.length === 0 && (
+              {jobs.length === 0 && (
                 <div className="col-span-full bg-white border border-slate-100 rounded-xl p-12 text-center">
                   <FileText className="w-12 h-12 text-slate-300 mx-auto mb-4" />
-                  <p className="text-sm text-slate-500">No companies to view applications for</p>
+                  <p className="text-sm text-slate-500">No job postings to view applications for</p>
+                </div>
+              )}
+              {jobs.length > 0 && filteredApplicationJobs.length === 0 && (
+                <div className="col-span-full bg-white border border-slate-100 rounded-xl p-12 text-center">
+                  <FileText className="w-12 h-12 text-slate-300 mx-auto mb-4" />
+                  <p className="text-sm text-slate-500">No job postings match the selected filters.</p>
                 </div>
               )}
             </div>
@@ -1070,12 +1140,95 @@ const CRCDashboard = ({ activeTab = "dashboard" }) => {
         </div>
       )}
 
-      {/* Company Applications Modal */}
+      {/* Create Company Modal */}
+      {showCompanyForm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div
+            className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+            onClick={() => {
+              setShowCompanyForm(false);
+              setNewCompany({ name: "", description: "" });
+            }}
+            aria-hidden="true"
+          />
+          <div
+            className="relative w-full max-w-lg overflow-hidden rounded-2xl bg-white shadow-2xl"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="create-company-title"
+          >
+            <div className="flex items-center justify-between border-b border-zinc-100 px-5 py-4">
+              <div>
+                <h2 id="create-company-title" className="text-lg font-semibold text-zinc-900">Create Company</h2>
+                <p className="text-sm text-zinc-500">Add a company assigned to you</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowCompanyForm(false);
+                  setNewCompany({ name: "", description: "" });
+                }}
+                className="rounded-lg p-2 text-zinc-400 hover:bg-zinc-100 hover:text-zinc-700 transition-colors"
+                aria-label="Close create company dialog"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <form onSubmit={handleCreateCompany} className="space-y-4 p-5">
+              <div>
+                <label className="block text-xs font-medium text-zinc-600 mb-1.5">Company Name *</label>
+                <input
+                  type="text"
+                  placeholder="e.g., Google, Microsoft, Amazon"
+                  value={newCompany.name}
+                  onChange={(e) => setNewCompany({ ...newCompany, name: e.target.value })}
+                  className="w-full px-3 py-2.5 border border-zinc-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all placeholder:text-zinc-400"
+                  required
+                  autoFocus
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-zinc-600 mb-1.5">Description *</label>
+                <textarea
+                  placeholder="Brief description about the company, industry, type of work..."
+                  value={newCompany.description}
+                  onChange={(e) => setNewCompany({ ...newCompany, description: e.target.value })}
+                  className="w-full px-3 py-2.5 border border-zinc-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 resize-none transition-all placeholder:text-zinc-400"
+                  rows="4"
+                  required
+                />
+              </div>
+              <div className="flex items-center justify-end gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowCompanyForm(false);
+                    setNewCompany({ name: "", description: "" });
+                  }}
+                  className="px-5 py-2.5 text-sm font-medium text-zinc-600 hover:text-zinc-800 hover:bg-zinc-100 rounded-xl transition-all"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="flex items-center gap-2 px-6 py-2.5 bg-indigo-600 text-white text-sm font-medium rounded-xl hover:bg-indigo-700 transition-colors"
+                >
+                  <Plus className="w-4 h-4" />
+                  Create Company
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Job Applications Modal */}
       {applicationsModalState.isOpen && (
-        <CompanyApplicationsModal
-          companyId={applicationsModalState.companyId}
+        <JobApplicationsModal
+          jobId={applicationsModalState.jobId}
+          jobTitle={applicationsModalState.jobTitle}
           companyName={applicationsModalState.companyName}
-          onClose={() => setApplicationsModalState({ isOpen: false, companyId: null, companyName: '' })}
+          onClose={() => setApplicationsModalState({ isOpen: false, jobId: null, jobTitle: '', companyName: '' })}
           updateApplicationStatus={updateApplicationStatus}
         />
       )}
@@ -1207,12 +1360,12 @@ const StudentDetailModal = ({ student, onClose }) => {
   );
 };
 
-const CompanyApplications = ({ companyId, updateApplicationStatus }) => {
-  const { data, refetch } = useQuery(GET_APPLICATIONS_BY_COMPANY, {
-    variables: { companyId },
+const JobApplications = ({ jobId, jobTitle, companyName, updateApplicationStatus }) => {
+  const { data, refetch } = useQuery(GET_APPLICATIONS_BY_JOB, {
+    variables: { jobId },
     fetchPolicy: "network-only"
   });
-  const applications = data?.applicationsByCompany || [];
+  const applications = data?.applicationsByJob || [];
   const [selectedStudent, setSelectedStudent] = useState(null);
   const [statusError, setStatusError] = useState("");
 
@@ -1241,8 +1394,6 @@ const CompanyApplications = ({ companyId, updateApplicationStatus }) => {
       return;
     }
 
-    const companyName = applications[0]?.company?.name || "Company";
-    
     const data = applications.map((app) => ({
       "Student Name": app.student?.name || "",
       "Email": app.student?.email || "",
@@ -1253,7 +1404,8 @@ const CompanyApplications = ({ companyId, updateApplicationStatus }) => {
       "CGPA": app.student?.cgpa || "",
       "Category": app.student?.category || "",
       "Gender": app.student?.gender || "",
-      "Job Title": app.job?.title || "",
+      "Company": companyName || "",
+      "Job Title": jobTitle || app.job?.title || "",
       "Resume URL": app.student?.resumeUrl || "",
       "Report Card URL": app.student?.reportCardUrl || "",
       "Category Certificate URL": app.student?.categoryCertificateUrl || "",
@@ -1264,7 +1416,7 @@ const CompanyApplications = ({ companyId, updateApplicationStatus }) => {
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Applications");
     
-    const fileName = `${companyName.replace(/[^a-zA-Z0-9]/g, "_")}_applications.xlsx`;
+    const fileName = `${(companyName || "Company").replace(/[^a-zA-Z0-9]/g, "_")}_${(jobTitle || "Job").replace(/[^a-zA-Z0-9]/g, "_")}_applications.xlsx`;
     XLSX.writeFile(wb, fileName);
   };
 
@@ -1355,8 +1507,8 @@ const CompanyApplications = ({ companyId, updateApplicationStatus }) => {
   );
 };
 
-const CompanyApplicationsModal = ({ companyId, companyName, onClose, updateApplicationStatus }) => {
-  if (!companyId) return null;
+const JobApplicationsModal = ({ jobId, jobTitle, companyName, onClose, updateApplicationStatus }) => {
+  if (!jobId) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -1366,7 +1518,7 @@ const CompanyApplicationsModal = ({ companyId, companyName, onClose, updateAppli
         <div className="flex items-center justify-between px-6 py-4 border-b border-zinc-100 bg-white">
           <div>
             <h2 className="text-lg font-semibold text-zinc-900">{companyName}</h2>
-            <p className="text-sm text-zinc-500">Applications</p>
+            <p className="text-sm text-zinc-500">{jobTitle} applications</p>
           </div>
           <button
             onClick={onClose}
@@ -1377,9 +1529,14 @@ const CompanyApplicationsModal = ({ companyId, companyName, onClose, updateAppli
           </button>
         </div>
 
-        {/* Content - CompanyApplications component */}
+        {/* Content - JobApplications component */}
         <div className="flex-1 overflow-y-auto">
-          <CompanyApplications companyId={companyId} updateApplicationStatus={updateApplicationStatus} />
+          <JobApplications
+            jobId={jobId}
+            jobTitle={jobTitle}
+            companyName={companyName}
+            updateApplicationStatus={updateApplicationStatus}
+          />
         </div>
       </div>
     </div>
