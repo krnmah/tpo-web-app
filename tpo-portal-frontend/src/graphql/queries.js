@@ -72,6 +72,7 @@ export const REGISTER_STUDENT = gql`
         domicileUrl
         personalEmail
         gender
+        blockedJobTypes
       }
     }
   }
@@ -98,6 +99,7 @@ export const LOGIN = gql`
         domicileUrl
         personalEmail
         gender
+        blockedJobTypes
       }
     }
   }
@@ -150,6 +152,7 @@ export const GET_ME = gql`
       domicileUrl
       personalEmail
       gender
+      blockedJobTypes
       createdAt
       updatedAt
     }
@@ -173,6 +176,7 @@ export const GET_STUDENTS = gql`
       reportCardUrl
       category
       gender
+      blockedJobTypes
       createdAt
     }
   }
@@ -256,6 +260,26 @@ export const ADMIN_UPDATE_USER = gql`
       gender
       cgpa
       role
+      blockedJobTypes
+      createdAt
+      updatedAt
+    }
+  }
+`;
+
+export const UPDATE_USER_EMPLOYMENT_BLOCKS = gql`
+  mutation UpdateUserEmploymentBlocks($id: ID!, $blockedJobTypes: [JobType!]!) {
+    updateUserEmploymentBlocks(id: $id, blockedJobTypes: $blockedJobTypes) {
+      id
+      name
+      email
+      enrollmentNumber
+      branch
+      category
+      gender
+      cgpa
+      role
+      blockedJobTypes
       createdAt
       updatedAt
     }
@@ -655,8 +679,8 @@ export const UPDATE_APPLICATION_STATUS = gql`
 // ==================== STATS QUERIES ====================
 
 export const GET_PLACEMENT_STATS = gql`
-  query GetPlacementStats {
-    placementStats {
+  query GetPlacementStats($branch: String) {
+    placementStats(branch: $branch) {
       totalStudents
       placedStudents
       placementPercentage

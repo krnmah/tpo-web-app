@@ -37,6 +37,7 @@ type User {
   domicileUrl: String
   personalEmail: String
   gender: Gender
+  blockedJobTypes: [JobType!]!
   createdAt: String!
   updatedAt: String!
 }
@@ -58,6 +59,7 @@ type UserResponse {
   domicileUrl: String
   personalEmail: String
   gender: Gender
+  blockedJobTypes: [JobType!]!
   createdAt: String!
   updatedAt: String!
 }
@@ -136,5 +138,8 @@ extend type Mutation {
 
   # ADMIN: Update user fields that are disabled for students
   adminUpdateUser(id: ID!, input: AdminUpdateUserInput!): UserResponse!
+
+  # ADMIN: Block/unblock a user from applying to selected employment types
+  updateUserEmploymentBlocks(id: ID!, blockedJobTypes: [JobType!]!): UserResponse!
 }
 `;

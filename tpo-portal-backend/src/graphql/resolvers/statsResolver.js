@@ -3,17 +3,26 @@ const { authorize } = require('../../middleware/auth');
 
 module.exports = {
   Query: {
-    placementStats: async (_, __, { user }) => {
+    placementStats: async (_, { branch }, { user }) => {
       authorize(user, ['ADMIN', 'CRC', 'STUDENT']);
 
+      const selectedBranch = branch && branch !== 'All' ? branch : null;
+      const studentWhere = {
+        role: { in: ['STUDENT', 'CRC'] },
+        ...(selectedBranch ? { branch: selectedBranch } : {})
+      };
+
       const totalStudents = await prisma.user.count({
-        where: { role: { in: ['STUDENT', 'CRC'] } }
+        where: studentWhere
       });
 
       // Count placed students (those with SELECTED status applications)
       const placedStudents = await prisma.application.groupBy({
         by: ['studentId'],
-        where: { status: 'SELECTED' }
+        where: {
+          status: 'SELECTED',
+          student: studentWhere
+        }
       });
 
       const placedCount = placedStudents.length;
@@ -66,11 +75,16 @@ module.exports = {
     placedStudents: async (_, { branch }, { user }) => {
       authorize(user, ['ADMIN']);
 
-      // Get all applications with SELECTED status
-      const whereClause = { status: 'SELECTED' };
+      const selectedBranch = branch && branch !== 'All' ? branch : null;
 
       const applications = await prisma.application.findMany({
-        where: whereClause,
+        where: {
+          status: 'SELECTED',
+          student: {
+            role: { in: ['STUDENT', 'CRC'] },
+            ...(selectedBranch ? { branch: selectedBranch } : {})
+          }
+        },
         include: {
           student: {
             select: {
@@ -96,14 +110,15 @@ module.exports = {
         orderBy: { updatedAt: 'desc' }
       });
 
-      // Filter by branch if provided
-      let filtered = applications;
-      if (branch && branch !== 'All') {
-        filtered = applications.filter(app => app.student.branch === branch);
+      const latestByStudent = new Map();
+      for (const app of applications) {
+        if (!latestByStudent.has(app.studentId)) {
+          latestByStudent.set(app.studentId, app);
+        }
       }
 
       // Transform to PlacedStudent format
-      return filtered.map(app => ({
+      return [...latestByStudent.values()].map(app => ({
         id: app.student.id,
         name: app.student.name,
         email: app.student.email,

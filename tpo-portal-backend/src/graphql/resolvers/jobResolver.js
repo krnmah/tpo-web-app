@@ -98,6 +98,8 @@ module.exports = {
 
       if (user.cgpa === null || user.cgpa === undefined) return false;
 
+      if (user.blockedJobTypes?.includes(job.jobType)) return false;
+
       // Check CGPA
       if (user.cgpa < job.minCgpa) return false;
 
@@ -217,6 +219,10 @@ module.exports = {
         where: {
           status: 'OPEN',
           minCgpa: { lte: student.cgpa },
+          ...(student.blockedJobTypes && student.blockedJobTypes.length > 0
+            ? { jobType: { notIn: student.blockedJobTypes } }
+            : {}
+          ),
           OR: [
             { eligibleBranches: { isEmpty: true } },
             { eligibleBranches: { has: student.branch } }
@@ -287,7 +293,10 @@ module.exports = {
               ...(job.eligibleBranches && job.eligibleBranches.length > 0
                 ? { branch: { in: job.eligibleBranches } }
                 : {}
-              )
+              ),
+              NOT: {
+                blockedJobTypes: { has: job.jobType }
+              }
             },
             select: {
               email: true,
@@ -430,7 +439,10 @@ module.exports = {
             ...(updated.eligibleBranches && updated.eligibleBranches.length > 0
               ? { branch: { in: updated.eligibleBranches } }
               : {}
-            )
+            ),
+            NOT: {
+              blockedJobTypes: { has: updated.jobType }
+            }
           },
           select: {
             email: true,

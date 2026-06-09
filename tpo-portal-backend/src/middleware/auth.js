@@ -26,7 +26,8 @@ async function authenticate(authorization) {
         branch: true,
         cgpa: true,
         skills: true,
-        resumeUrl: true
+        resumeUrl: true,
+        blockedJobTypes: true
       }
     });
 

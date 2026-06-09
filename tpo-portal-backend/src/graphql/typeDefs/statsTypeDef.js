@@ -19,13 +19,13 @@ type PlacedStudent {
   email: String!
   enrollmentNumber: String
   branch: String!
-  cgpa: Float!
+  cgpa: Float
   companyName: String!
   placedAt: String!
 }
 
 extend type Query {
-  placementStats: PlacementStats!
+  placementStats(branch: String): PlacementStats!
   dashboardStats: DashboardStats!
   placedStudents(branch: String): [PlacedStudent!]!
 }

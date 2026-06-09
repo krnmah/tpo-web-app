@@ -246,6 +246,11 @@ throw error;
           throw new Error('Job not found');
         }
 
+        if (student.blockedJobTypes?.includes(job.jobType)) {
+          logApplication.applyFailure(user.id, jobId, `Blocked for ${job.jobType}`);
+          throw new Error(`You are blocked by the administrator from applying to ${job.jobType.replace(/_/g, ' ')} opportunities. Please contact the T&P admin for any query.`);
+        }
+
         // CRITICAL: Check if job is OPEN
         if (job.status !== 'OPEN') {
           logApplication.applyFailure(user.id, jobId, 'Job closed');

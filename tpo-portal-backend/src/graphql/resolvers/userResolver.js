@@ -5,6 +5,8 @@ const { hashPassword } = require('../../utils/auth');
 const { logAudit, logger } = require('../../utils/logger');
 const { normalizeBranchName } = require('../../utils/branches');
 
+const VALID_JOB_TYPES = new Set(['INTERN_ONLY', 'INTERN_PPO', 'INTERN_FTE', 'FTE_ONLY']);
+
 module.exports = {
   Query: {
     users: async (_, __, { user }) => {
@@ -321,6 +323,38 @@ module.exports = {
         }
         throw error;
       }
+    },
+
+    updateUserEmploymentBlocks: async (_, { id, blockedJobTypes }, { user }) => {
+      authorize(user, ['ADMIN']);
+
+      const targetId = parseInt(id);
+      const targetUser = await prisma.user.findUnique({
+        where: { id: targetId }
+      });
+
+      if (!targetUser) {
+        throw new Error('User not found');
+      }
+
+      if (targetUser.role === 'ADMIN') {
+        throw new Error('Cannot block an ADMIN from employment types');
+      }
+
+      const uniqueBlockedTypes = [...new Set(blockedJobTypes || [])];
+      const invalidType = uniqueBlockedTypes.find((type) => !VALID_JOB_TYPES.has(type));
+      if (invalidType) {
+        throw new Error(`Invalid employment type: ${invalidType}`);
+      }
+
+      const updated = await prisma.user.update({
+        where: { id: targetId },
+        data: { blockedJobTypes: uniqueBlockedTypes }
+      });
+
+      logAudit.dataAccess(user.id, `employment_blocks_update_${id}`);
+
+      return sanitizeUser(updated);
     }
   }
 };

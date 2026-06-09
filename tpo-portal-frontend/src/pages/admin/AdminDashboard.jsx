@@ -3,8 +3,9 @@ import { useQuery, useMutation } from "@apollo/client";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import { useConfirm } from "../../components/ConfirmDialog";
-import { GET_COMPANIES, GET_DASHBOARD_STATS, GET_STUDENTS, GET_PLACED_STUDENTS } from "../../graphql/queries";
+import { GET_COMPANIES, GET_DASHBOARD_STATS, GET_STUDENTS, GET_PLACED_STUDENTS, GET_PLACEMENT_STATS } from "../../graphql/queries";
 import { ASSIGN_CRC, REMOVE_CRC, CREATE_COMPANY, UPDATE_COMPANY, DELETE_COMPANY } from "../../graphql/queries";
+import { UPDATE_USER_EMPLOYMENT_BLOCKS } from "../../graphql/queries";
 import EditUserSlideOver from "../../components/EditUserSlideOver";
 import {
   LayoutDashboard,
@@ -20,7 +21,15 @@ import {
   Pencil,
   Trash2,
   Menu,
+  AlertCircle,
 } from "../../components/Icons";
+
+const EMPLOYMENT_TYPES = [
+  { value: "INTERN_ONLY", label: "Intern Only" },
+  { value: "INTERN_PPO", label: "Intern + PPO" },
+  { value: "INTERN_FTE", label: "Intern + FTE" },
+  { value: "FTE_ONLY", label: "FTE Only" },
+];
 
 const AdminDashboard = () => {
   const { user, logout } = useAuth();
@@ -51,6 +60,7 @@ const AdminDashboard = () => {
   const [createCompany] = useMutation(CREATE_COMPANY);
   const [updateCompany] = useMutation(UPDATE_COMPANY);
   const [deleteCompany] = useMutation(DELETE_COMPANY);
+  const [updateUserEmploymentBlocks, { loading: updatingEmploymentBlocks }] = useMutation(UPDATE_USER_EMPLOYMENT_BLOCKS);
 
   const stats = statsData?.dashboardStats || { totalStudents: 0, totalCompanies: 0, activeJobs: 0, totalApplications: 0, placementPercentage: 0 };
   const companies = companiesData?.companies || [];
@@ -58,6 +68,8 @@ const AdminDashboard = () => {
 
   const [crcEmail, setCrcEmail] = useState("");
   const [showCRCForm, setShowCRCForm] = useState(false);
+  const [searchCRC, setSearchCRC] = useState("");
+  const [selectedCRCBranch, setSelectedCRCBranch] = useState("All");
   const [selectedBranch, setSelectedBranch] = useState("All");
   const [selectedBatch, setSelectedBatch] = useState("All");
   const [searchEnrollment, setSearchEnrollment] = useState("");
@@ -67,6 +79,7 @@ const AdminDashboard = () => {
   const [companyName, setCompanyName] = useState("");
   const [assignCrcId, setAssignCrcId] = useState("");
   const [showAssignForm, setShowAssignForm] = useState(false);
+  const [searchCompany, setSearchCompany] = useState("");
 
   // Toast notification state
   const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
@@ -79,6 +92,8 @@ const AdminDashboard = () => {
   // Edit user state
   const [selectedUser, setSelectedUser] = useState(null);
   const [editPanelOpen, setEditPanelOpen] = useState(false);
+  const [employmentBlockUser, setEmploymentBlockUser] = useState(null);
+  const [employmentBlockValues, setEmploymentBlockValues] = useState([]);
 
   // Check if enrollment has drop year pattern (contains dash like "2021-22bcse023")
   const isDropYear = (enrollmentNumber) => {
@@ -109,13 +124,34 @@ const AdminDashboard = () => {
 
   // Get all unique batches from students
   const allBatches = [...new Set(students.map(s => getBatch(s.enrollmentNumber)).filter(Boolean))].sort().reverse();
+  const crcMembers = students.filter((student) => student.role === 'CRC');
+  const crcBranchOptions = [...new Set(crcMembers.map((crc) => crc.branch).filter(Boolean))].sort();
+  const crcSearchQuery = searchCRC.trim().toLowerCase();
+  const filteredCRCMembers = crcMembers.filter((crc) => {
+    const nameMatch = !crcSearchQuery || crc.name?.toLowerCase().includes(crcSearchQuery);
+    const branchMatch = selectedCRCBranch === "All" || crc.branch === selectedCRCBranch;
+    return nameMatch && branchMatch;
+  });
+  const companySearchQuery = searchCompany.trim().toLowerCase();
+  const filteredCompanies = companySearchQuery
+    ? companies.filter((company) => company.name?.toLowerCase().includes(companySearchQuery))
+    : companies;
 
   const { data: placedStudentsData } = useQuery(GET_PLACED_STUDENTS, {
     variables: { branch: statsBranchFilter === "All" ? null : statsBranchFilter },
     fetchPolicy: "network-only",
   });
+  const { data: placementStatsData } = useQuery(GET_PLACEMENT_STATS, {
+    variables: { branch: statsBranchFilter === "All" ? null : statsBranchFilter },
+    fetchPolicy: "network-only",
+  });
 
   const placedStudents = placedStudentsData?.placedStudents || [];
+  const filteredPlacementStats = placementStatsData?.placementStats || {
+    totalStudents: 0,
+    placedStudents: 0,
+    placementPercentage: 0
+  };
 
   const handleAssignCRC = async () => {
     if (!crcEmail.endsWith("@nitsri.ac.in")) {
@@ -242,6 +278,44 @@ const AdminDashboard = () => {
   const openEditPanel = (user) => {
     setSelectedUser(user);
     setEditPanelOpen(true);
+  };
+
+  const openEmploymentBlocks = (user) => {
+    setEmploymentBlockUser(user);
+    setEmploymentBlockValues(user.blockedJobTypes || []);
+  };
+
+  const closeEmploymentBlocks = () => {
+    setEmploymentBlockUser(null);
+    setEmploymentBlockValues([]);
+  };
+
+  const toggleEmploymentBlock = (jobType) => {
+    setEmploymentBlockValues((current) =>
+      current.includes(jobType)
+        ? current.filter((type) => type !== jobType)
+        : [...current, jobType]
+    );
+  };
+
+  const saveEmploymentBlocks = async () => {
+    if (!employmentBlockUser) return;
+
+    try {
+      await updateUserEmploymentBlocks({
+        variables: {
+          id: employmentBlockUser.id,
+          blockedJobTypes: employmentBlockValues,
+        },
+      });
+      setToast({ show: true, message: "Employment blocks updated successfully!", type: "success" });
+      setTimeout(() => setToast(prev => ({ ...prev, show: false })), 3000);
+      refetchStudents();
+      closeEmploymentBlocks();
+    } catch (err) {
+      setToast({ show: true, message: err.message || "Failed to update employment blocks", type: "error" });
+      setTimeout(() => setToast(prev => ({ ...prev, show: false })), 3000);
+    }
   };
 
   const handleEditUserSuccess = () => {
@@ -526,7 +600,9 @@ const AdminDashboard = () => {
                   </div>
                   <div>
                     <h3 className="text-sm font-semibold text-gray-900">CRC Members</h3>
-                    <p className="text-xs text-gray-500">{students.filter(s => s.role === 'CRC').length} assigned</p>
+                    <p className="text-xs text-gray-500">
+                      {crcMembers.length} assigned{(searchCRC || selectedCRCBranch !== "All") ? ` · ${filteredCRCMembers.length} shown` : ""}
+                    </p>
                   </div>
                 </div>
                 <button
@@ -564,19 +640,59 @@ const AdminDashboard = () => {
                 </div>
               )}
 
+              <div className="px-6 py-4 border-b border-gray-100 bg-white flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between">
+                <div className="relative w-full sm:max-w-xs">
+                  <input
+                    type="text"
+                    placeholder="Search CRC by name..."
+                    value={searchCRC}
+                    onChange={(e) => setSearchCRC(e.target.value)}
+                    className="w-full pl-9 pr-8 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 placeholder-gray-400"
+                  />
+                  <svg className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                  </svg>
+                  {searchCRC && (
+                    <button
+                      onClick={() => setSearchCRC("")}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                      aria-label="Clear CRC search"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  )}
+                </div>
+                <div className="flex items-center gap-2">
+                  <label className="text-sm text-gray-600 font-medium whitespace-nowrap">Branch:</label>
+                  <select
+                    value={selectedCRCBranch}
+                    onChange={(e) => setSelectedCRCBranch(e.target.value)}
+                    className="px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 min-w-0 flex-1 sm:flex-none"
+                  >
+                    <option value="All">All Branches</option>
+                    {crcBranchOptions.map((branch) => (
+                      <option key={branch} value={branch}>
+                        {branch}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
               <div className="overflow-x-auto">
                 <table className="w-full">
                   <thead className="bg-gray-50">
                     <tr>
                       <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Name</th>
                       <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Email</th>
+                      <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Branch</th>
                       <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">CGPA</th>
                       <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Companies</th>
                       <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Action</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100">
-                    {students.filter(s => s.role === 'CRC').map((crc) => (
+                    {filteredCRCMembers.map((crc) => (
                       <tr key={crc.id} className="hover:bg-gray-50 transition-colors">
                         <td className="px-6 py-4">
                           <div className="flex items-center gap-3">
@@ -587,7 +703,8 @@ const AdminDashboard = () => {
                           </div>
                         </td>
                         <td className="px-6 py-4 text-sm text-gray-500">{crc.email}</td>
-                        <td className="px-6 py-4 text-sm text-gray-900 font-medium">{crc.cgpa}</td>
+                        <td className="px-6 py-4 text-sm text-gray-600">{crc.branch || '—'}</td>
+                        <td className="px-6 py-4 text-sm text-gray-900 font-medium">{crc.cgpa || '—'}</td>
                         <td className="px-6 py-4 text-sm text-gray-600">
                           {companies.filter(c => c.assignedCRC?.id === crc.id).length > 0 ? (
                             <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-green-50 text-green-700 text-xs font-medium rounded-lg">
@@ -607,14 +724,16 @@ const AdminDashboard = () => {
                         </td>
                       </tr>
                     ))}
-                    {students.filter(s => s.role === 'CRC').length === 0 && (
+                    {filteredCRCMembers.length === 0 && (
                       <tr>
-                        <td colSpan="5" className="px-6 py-12 text-center">
+                        <td colSpan="6" className="px-6 py-12 text-center">
                           <div className="flex flex-col items-center gap-3">
                             <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center">
                               <Shield className="w-6 h-6 text-gray-400" />
                             </div>
-                            <p className="text-sm text-gray-500">No CRC members assigned yet</p>
+                            <p className="text-sm text-gray-500">
+                              {searchCRC || selectedCRCBranch !== "All" ? "No CRC members match the selected filters" : "No CRC members assigned yet"}
+                            </p>
                           </div>
                         </td>
                       </tr>
@@ -628,87 +747,118 @@ const AdminDashboard = () => {
 
         {activeTab === "companies" && (
           <div className="space-y-6">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <h1 className="text-2xl font-bold text-gray-900">Companies</h1>
                 <p className="text-sm text-gray-500 mt-1">Manage registered companies</p>
               </div>
-              <button
-                onClick={() => setShowAssignForm(!showAssignForm)}
-                className="flex items-center gap-2 px-4 py-2 text-sm font-medium bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors shadow-sm"
-              >
-                <Shield className="w-4 h-4" />
-                Assign CRC a Company
-              </button>
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3">
+                <div className="relative">
+                  <input
+                    type="text"
+                    placeholder="Search company..."
+                    value={searchCompany}
+                    onChange={(e) => setSearchCompany(e.target.value)}
+                    className="w-full sm:w-64 pl-9 pr-8 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 placeholder-gray-400"
+                  />
+                  <svg className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                  </svg>
+                  {searchCompany && (
+                    <button
+                      onClick={() => setSearchCompany("")}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                      aria-label="Clear company search"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  )}
+                </div>
+                <button
+                  onClick={() => setShowAssignForm(true)}
+                  className="flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors shadow-sm"
+                >
+                  <Shield className="w-4 h-4" />
+                  Assign CRC a Company
+                </button>
+              </div>
             </div>
 
             {showAssignForm && (
-              <div className="bg-gradient-to-br from-white to-blue-50/30 rounded-2xl shadow-lg border border-blue-100 overflow-hidden">
-                <div className="flex items-center justify-between px-6 py-4 bg-gradient-to-r from-blue-600 to-blue-500">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 bg-white/20 rounded-lg">
-                      <Building2 className="w-5 h-5 text-white" />
+              <div className="fixed inset-0 z-[70] flex items-center justify-center p-4">
+                <div
+                  className="absolute inset-0 bg-black/50"
+                  onClick={() => { setShowAssignForm(false); setCompanyName(""); setAssignCrcId(""); }}
+                  aria-hidden="true"
+                />
+                <div className="relative w-full max-w-2xl bg-white rounded-2xl shadow-2xl border border-blue-100 overflow-hidden">
+                  <div className="flex items-center justify-between px-6 py-4 bg-gradient-to-r from-blue-600 to-blue-500">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-white/20 rounded-lg">
+                        <Building2 className="w-5 h-5 text-white" />
+                      </div>
+                      <div>
+                        <h3 className="text-base font-semibold text-white">Assign CRC a Company</h3>
+                        <p className="text-xs text-blue-100">Create a company and assign it to a CRC member</p>
+                      </div>
                     </div>
-                    <div>
-                      <h3 className="text-base font-semibold text-white">Assign CRC a Company</h3>
-                      <p className="text-xs text-blue-100">Create a company and assign it to a CRC member</p>
-                    </div>
-                  </div>
-                  <button
-                    onClick={() => { setShowAssignForm(false); setCompanyName(""); setAssignCrcId(""); }}
-                    className="p-2 text-white/80 hover:text-white hover:bg-white/20 rounded-lg transition-all"
-                  >
-                    <X className="w-5 h-5" />
-                  </button>
-                </div>
-                <div className="p-6 space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
-                        <Building2 className="w-4 h-4 text-gray-400" />
-                        Company Name
-                      </label>
-                      <input
-                        type="text"
-                        placeholder="e.g., Google, Microsoft, Amazon"
-                        value={companyName}
-                        onChange={(e) => setCompanyName(e.target.value)}
-                        className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all placeholder:text-gray-400"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
-                        <Shield className="w-4 h-4 text-gray-400" />
-                        Assign to CRC
-                      </label>
-                      <select
-                        value={assignCrcId}
-                        onChange={(e) => setAssignCrcId(e.target.value)}
-                        className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all bg-white"
-                      >
-                        <option value="">Select a CRC member</option>
-                        {students.filter(s => s.role === 'CRC').map((crc) => (
-                          <option key={crc.id} value={crc.id}>
-                            {crc.name} ({crc.email})
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  </div>
-                  <div className="flex items-center justify-end gap-3 pt-2">
                     <button
                       onClick={() => { setShowAssignForm(false); setCompanyName(""); setAssignCrcId(""); }}
-                      className="px-5 py-2.5 text-sm font-medium text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-xl transition-all"
+                      className="p-2 text-white/80 hover:text-white hover:bg-white/20 rounded-lg transition-all"
+                      aria-label="Close assign company dialog"
                     >
-                      Cancel
+                      <X className="w-5 h-5" />
                     </button>
-                    <button
-                      onClick={handleAssignCRCToCompany}
-                      className="flex items-center gap-2 px-6 py-2.5 bg-gradient-to-r from-blue-600 to-blue-500 text-white text-sm font-medium rounded-xl hover:from-blue-700 hover:to-blue-600 shadow-lg shadow-blue-500/30 hover:shadow-xl hover:shadow-blue-500/40 transition-all"
-                    >
-                      <Plus className="w-4 h-4" />
-                      Assign Company
-                    </button>
+                  </div>
+                  <div className="p-6 space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
+                          <Building2 className="w-4 h-4 text-gray-400" />
+                          Company Name
+                        </label>
+                        <input
+                          type="text"
+                          placeholder="e.g., Google, Microsoft, Amazon"
+                          value={companyName}
+                          onChange={(e) => setCompanyName(e.target.value)}
+                          className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all placeholder:text-gray-400"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
+                          <Shield className="w-4 h-4 text-gray-400" />
+                          Assign to CRC
+                        </label>
+                        <select
+                          value={assignCrcId}
+                          onChange={(e) => setAssignCrcId(e.target.value)}
+                          className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all bg-white"
+                        >
+                          <option value="">Select a CRC member</option>
+                          {students.filter(s => s.role === 'CRC').map((crc) => (
+                            <option key={crc.id} value={crc.id}>
+                              {crc.name} ({crc.email})
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-end gap-3 pt-2">
+                      <button
+                        onClick={() => { setShowAssignForm(false); setCompanyName(""); setAssignCrcId(""); }}
+                        className="px-5 py-2.5 text-sm font-medium text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-xl transition-all"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        onClick={handleAssignCRCToCompany}
+                        className="flex items-center gap-2 px-6 py-2.5 bg-gradient-to-r from-blue-600 to-blue-500 text-white text-sm font-medium rounded-xl hover:from-blue-700 hover:to-blue-600 shadow-lg shadow-blue-500/30 hover:shadow-xl hover:shadow-blue-500/40 transition-all"
+                      >
+                        <Plus className="w-4 h-4" />
+                        Assign Company
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -774,7 +924,7 @@ const AdminDashboard = () => {
                         </td>
                       </tr>
                     )}
-                    {companies.map((company) => (
+                    {filteredCompanies.map((company) => (
                       <tr key={company.id} className={`hover:bg-gray-50 transition-colors ${editingCompany?.id === company.id ? 'hidden' : ''}`}>
                         <td className="px-6 py-4">
                           <div className="flex items-center gap-3">
@@ -815,9 +965,11 @@ const AdminDashboard = () => {
                         </td>
                       </tr>
                     ))}
-                    {companies.length === 0 && (
+                    {filteredCompanies.length === 0 && (
                       <tr>
-                        <td colSpan="4" className="px-6 py-12 text-center text-sm text-gray-500">No companies registered yet</td>
+                        <td colSpan="4" className="px-6 py-12 text-center text-sm text-gray-500">
+                          {searchCompany ? `No companies found matching "${searchCompany}"` : "No companies registered yet"}
+                        </td>
                       </tr>
                     )}
                   </tbody>
@@ -831,14 +983,16 @@ const AdminDashboard = () => {
           <div className="space-y-6">
             <div>
               <h1 className="text-2xl font-bold text-gray-900">Placement Statistics</h1>
-              <p className="text-sm text-gray-500 mt-1">Overall placement overview</p>
+              <p className="text-sm text-gray-500 mt-1">
+                {statsBranchFilter === "All" ? "Overall placement overview" : `${statsBranchFilter} placement overview`}
+              </p>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-              <StatCard label="Total Students" value={stats.totalStudents} icon={Users} />
-              <StatCard label="Placed" value={Math.round(stats.totalStudents * stats.placementPercentage / 100)} icon={Check} />
+              <StatCard label="Total Students" value={filteredPlacementStats.totalStudents} icon={Users} />
+              <StatCard label="Placed" value={filteredPlacementStats.placedStudents} icon={Check} />
               <StatCard label="Companies" value={stats.totalCompanies} icon={Building2} />
-              <StatCard label="Placement Rate" value={`${stats.placementPercentage.toFixed(1)}%`} icon={TrendingUp} />
+              <StatCard label="Placement Rate" value={`${filteredPlacementStats.placementPercentage.toFixed(1)}%`} icon={TrendingUp} />
             </div>
 
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
@@ -846,14 +1000,14 @@ const AdminDashboard = () => {
               <div className="relative h-10 bg-gray-100 rounded-full overflow-hidden">
                 <div
                   className="h-full bg-gradient-to-r from-blue-600 to-blue-500 rounded-full transition-all duration-500 flex items-center justify-end pr-4"
-                  style={{ width: `${stats.placementPercentage}%` }}
+                  style={{ width: `${filteredPlacementStats.placementPercentage}%` }}
                 >
-                  <span className="text-sm font-bold text-white">{stats.placementPercentage.toFixed(1)}%</span>
+                  <span className="text-sm font-bold text-white">{filteredPlacementStats.placementPercentage.toFixed(1)}%</span>
                 </div>
               </div>
               <p className="text-center text-sm text-gray-600 mt-4">
-                {stats.totalStudents > 0
-                  ? `${Math.round(stats.totalStudents * stats.placementPercentage / 100)} out of ${stats.totalStudents} students placed`
+                {filteredPlacementStats.totalStudents > 0
+                  ? `${filteredPlacementStats.placedStudents} out of ${filteredPlacementStats.totalStudents} students placed`
                   : "No students registered yet"}
               </p>
             </div>
@@ -955,10 +1109,10 @@ const AdminDashboard = () => {
                 <div className="relative">
                   <input
                     type="text"
-                    placeholder="Search enrollment..."
+                    placeholder="Search name or enrollment..."
                     value={searchEnrollment}
                     onChange={(e) => setSearchEnrollment(e.target.value)}
-                    className="w-full sm:w-48 pl-9 pr-8 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 placeholder-gray-400"
+                    className="w-full sm:w-64 pl-9 pr-8 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 placeholder-gray-400"
                   />
                   <svg className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -1035,10 +1189,21 @@ const AdminDashboard = () => {
                           batchMatch = selectedBatch === "All" || studentBatch === selectedBatch;
                         }
 
-                        const searchMatch = !searchEnrollment ||
-                          (student.enrollmentNumber?.toLowerCase().includes(searchEnrollment.toLowerCase()));
+                        const searchQuery = searchEnrollment.trim().toLowerCase();
+                        const searchMatch = !searchQuery ||
+                          student.enrollmentNumber?.toLowerCase().includes(searchQuery) ||
+                          student.name?.toLowerCase().includes(searchQuery);
 
                         return branchMatch && batchMatch && searchMatch;
+                      })
+                      .sort((a, b) => {
+                        if (selectedBranch === "All") {
+                          return (a.name || "").localeCompare(b.name || "", undefined, { sensitivity: "base" });
+                        }
+                        return (a.enrollmentNumber || "").localeCompare(b.enrollmentNumber || "", undefined, {
+                          numeric: true,
+                          sensitivity: "base",
+                        });
                       })
                       .map((user) => {
                         const dropYear = isDropYear(user.enrollmentNumber);
@@ -1090,13 +1255,33 @@ const AdminDashboard = () => {
                         </td>
                         <td className="px-6 py-4 text-sm text-gray-900">{user.cgpa || "—"}</td>
                         <td className="px-6 py-4">
-                          <button
-                            onClick={() => openEditPanel(user)}
-                            className="p-2 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer"
-                            aria-label="Edit user"
-                          >
-                            <Pencil className="w-4 h-4 text-gray-600" />
-                          </button>
+                          <div className="flex items-center gap-1">
+                            <button
+                              onClick={() => openEditPanel(user)}
+                              className="p-2 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer"
+                              aria-label="Edit user"
+                              title="Edit user"
+                            >
+                              <Pencil className="w-4 h-4 text-gray-600" />
+                            </button>
+                            <button
+                              onClick={() => openEmploymentBlocks(user)}
+                              className={`relative p-2 rounded-lg transition-colors cursor-pointer ${
+                                user.blockedJobTypes?.length
+                                  ? "bg-red-50 hover:bg-red-100"
+                                  : "hover:bg-gray-100"
+                              }`}
+                              aria-label="Manage employment blocks"
+                              title="Manage employment blocks"
+                            >
+                              <AlertCircle className={`w-4 h-4 ${user.blockedJobTypes?.length ? "text-red-600" : "text-gray-600"}`} />
+                              {user.blockedJobTypes?.length > 0 && (
+                                <span className="absolute -top-1 -right-1 min-w-4 h-4 px-1 rounded-full bg-red-600 text-white text-[10px] leading-4 text-center">
+                                  {user.blockedJobTypes.length}
+                                </span>
+                              )}
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     );})}
@@ -1112,8 +1297,10 @@ const AdminDashboard = () => {
                         batchMatch = selectedBatch === "All" || studentBatch === selectedBatch;
                       }
 
-                      const searchMatch = !searchEnrollment ||
-                        (student.enrollmentNumber?.toLowerCase().includes(searchEnrollment.toLowerCase()));
+                      const searchQuery = searchEnrollment.trim().toLowerCase();
+                      const searchMatch = !searchQuery ||
+                        student.enrollmentNumber?.toLowerCase().includes(searchQuery) ||
+                        student.name?.toLowerCase().includes(searchQuery);
 
                       return branchMatch && batchMatch && searchMatch;
                     }).length === 0 && (
@@ -1181,6 +1368,79 @@ const AdminDashboard = () => {
         onSuccess={handleEditUserSuccess}
         onError={handleEditUserError}
       />
+
+      {employmentBlockUser && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center p-4">
+          <div
+            className="absolute inset-0 bg-black/50"
+            onClick={closeEmploymentBlocks}
+            aria-hidden="true"
+          />
+          <div className="relative w-full max-w-md bg-white rounded-2xl shadow-2xl border border-gray-100 overflow-hidden">
+            <div className="px-5 py-4 border-b border-gray-100 flex items-start justify-between gap-4">
+              <div>
+                <h3 className="text-base font-semibold text-gray-900">Employment Blocks</h3>
+                <p className="text-sm text-gray-500 mt-1">
+                  {employmentBlockUser.name} · {employmentBlockUser.enrollmentNumber || employmentBlockUser.email}
+                </p>
+              </div>
+              <button
+                onClick={closeEmploymentBlocks}
+                className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors"
+                aria-label="Close"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="p-5 space-y-3">
+              {EMPLOYMENT_TYPES.map((type) => {
+                const checked = employmentBlockValues.includes(type.value);
+                return (
+                  <label
+                    key={type.value}
+                    className={`flex items-center gap-3 rounded-lg border px-4 py-3 cursor-pointer transition-colors ${
+                      checked
+                        ? "border-red-200 bg-red-50"
+                        : "border-gray-200 hover:bg-gray-50"
+                    }`}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={checked}
+                      onChange={() => toggleEmploymentBlock(type.value)}
+                      className="h-4 w-4 rounded border-gray-300 text-red-600 focus:ring-red-500"
+                    />
+                    <span className={`text-sm font-medium ${checked ? "text-red-700" : "text-gray-700"}`}>
+                      {type.label}
+                    </span>
+                  </label>
+                );
+              })}
+
+              <div className="rounded-lg border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-700">
+                Selected blocks will stop this user from applying to matching job postings.
+              </div>
+            </div>
+
+            <div className="px-5 py-4 bg-gray-50 border-t border-gray-100 flex justify-end gap-2">
+              <button
+                onClick={closeEmploymentBlocks}
+                className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={saveEmploymentBlocks}
+                disabled={updatingEmploymentBlocks}
+                className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
+              >
+                {updatingEmploymentBlocks ? "Saving..." : "Save Blocks"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

@@ -65,6 +65,7 @@ model User {
   domicileUrl            String?
   personalEmail          String?    @unique
   gender                 Gender?
+  blockedJobTypes        JobType[]  @default([])
   createdAt              DateTime   @default(now())
   updatedAt        DateTime  @updatedAt
 
