@@ -1,6 +1,6 @@
 import { Link, useLocation } from "react-router-dom";
 import { useState } from "react";
-import nitsLogo from "../assets/nitslogo.png";
+import nitsLogo from "../assets/images/brand/nitslogo.png";
 import SocialsModal from "./SocialsModal";
 
 const SharedHeader = () => {

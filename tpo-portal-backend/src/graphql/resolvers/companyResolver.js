@@ -3,6 +3,48 @@ const { authorize } = require('../../middleware/auth');
 const { validateCreateCompany } = require('../../utils/validation');
 const { logAudit, logger } = require('../../utils/logger');
 
+async function attachCompanyCounts(companies) {
+  if (!companies.length) return companies;
+
+  const companyIds = companies.map((company) => company.id);
+
+  const jobsWithApplicationCounts = await prisma.job.findMany({
+    where: {
+      companyId: { in: companyIds }
+    },
+    select: {
+      companyId: true,
+      status: true,
+      _count: {
+        select: { applications: true }
+      }
+    }
+  });
+
+  const activeJobCountByCompany = new Map();
+  const applicationCountByCompany = new Map();
+
+  jobsWithApplicationCounts.forEach((job) => {
+    if (job.status === 'OPEN') {
+      activeJobCountByCompany.set(
+        job.companyId,
+        (activeJobCountByCompany.get(job.companyId) || 0) + 1
+      );
+    }
+
+    applicationCountByCompany.set(
+      job.companyId,
+      (applicationCountByCompany.get(job.companyId) || 0) + job._count.applications
+    );
+  });
+
+  return companies.map((company) => ({
+    ...company,
+    activeJobCount: activeJobCountByCompany.get(company.id) || 0,
+    applicationCount: applicationCountByCompany.get(company.id) || 0
+  }));
+}
+
 module.exports = {
   Company: {
     assignedCRC: async (company, _, __) => {
@@ -21,6 +63,9 @@ module.exports = {
     createdAt: (company) => company.createdAt?.toISOString() || null,
     updatedAt: (company) => company.updatedAt?.toISOString() || null,
     hasActiveJobs: async (company, _, __) => {
+      if (typeof company.activeJobCount === 'number') {
+        return company.activeJobCount > 0;
+      }
       const activeJobs = await prisma.job.count({
         where: {
           companyId: company.id,
@@ -29,13 +74,34 @@ module.exports = {
       });
       return activeJobs > 0;
     },
+    activeJobCount: async (company, _, __) => {
+      if (typeof company.activeJobCount === 'number') return company.activeJobCount;
+
+      return await prisma.job.count({
+        where: {
+          companyId: company.id,
+          status: 'OPEN'
+        }
+      });
+    },
+    applicationCount: async (company, _, __) => {
+      if (typeof company.applicationCount === 'number') return company.applicationCount;
+
+      return await prisma.application.count({
+        where: {
+          job: {
+            companyId: company.id
+          }
+        }
+      });
+    },
   },
 
   Query: {
     companies: async (_, __, { user }) => {
       authorize(user, ['ADMIN', 'CRC', 'STUDENT']);
 
-      return await prisma.company.findMany({
+      const companies = await prisma.company.findMany({
         include: {
           _count: {
             select: { jobs: true }
@@ -43,6 +109,8 @@ module.exports = {
         },
         orderBy: { createdAt: 'desc' }
       });
+
+      return attachCompanyCounts(companies);
     },
 
     company: async (_, { id }, { user }) => {
@@ -56,7 +124,8 @@ module.exports = {
         throw new Error('Company not found');
       }
 
-      return company;
+      const [companyWithCounts] = await attachCompanyCounts([company]);
+      return companyWithCounts;
     },
 
     /**
@@ -76,7 +145,7 @@ module.exports = {
         count: companies.length
       });
 
-      return companies;
+      return attachCompanyCounts(companies);
     }
   },
 

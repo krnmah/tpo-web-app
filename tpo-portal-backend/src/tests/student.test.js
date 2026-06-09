@@ -5,6 +5,8 @@ const { expressMiddleware } = require('@apollo/server/express4');
 const bodyParser = require('body-parser');
 const schema = require('../graphql/schema');
 const prisma = require('../config/prismaClient');
+const { buildContext } = require('../middleware/auth');
+const { generateToken, hashPassword } = require('../utils/auth');
 
 let app;
 
@@ -14,8 +16,43 @@ beforeAll(async () => {
 
   app = express();
   app.use(bodyParser.json());
-  app.use('/graphql', expressMiddleware(server));
+  app.use('/graphql', expressMiddleware(server, {
+    context: async ({ req }) => buildContext(req)
+  }));
 });
+
+function registerStudentMutation(data) {
+  return `
+    mutation {
+      registerStudent(
+        name: "${data.name}"
+        enrollmentNumber: "${data.enrollmentNumber}"
+        branch: "${data.branch || 'Computer Science and Engineering'}"
+        email: "${data.email}"
+        password: "${data.password || 'Password@123'}"
+        cgpa: ${data.cgpa ?? 8.5}
+        skills: ${JSON.stringify(data.skills || ['JavaScript', 'React'])}
+        resumeUrl: "${data.resumeUrl || 'https://example.com/resume.pdf'}"
+        reportCardUrl: "${data.reportCardUrl || 'https://example.com/report-card.pdf'}"
+        mobile: "${data.mobile || '9876543210'}"
+        category: ${data.category || 'GENERAL'}
+        categoryCertificateUrl: ${data.categoryCertificateUrl ? `"${data.categoryCertificateUrl}"` : null}
+        domicileUrl: ${data.domicileUrl ? `"${data.domicileUrl}"` : null}
+        personalEmail: "${data.personalEmail}"
+        gender: ${data.gender || 'MALE'}
+      ) {
+        token
+        user {
+          id
+          name
+          email
+          role
+          cgpa
+        }
+      }
+    }
+  `;
+}
 
 describe('Authentication Tests', () => {
   let studentId;
@@ -30,28 +67,12 @@ describe('Authentication Tests', () => {
   });
 
   it('registers a student with valid data', async () => {
-    const mutation = `
-      mutation {
-        registerStudent(
-          name: "John Doe"
-          enrollmentNumber: "${enrollmentNumber}"
-          email: "${email}"
-          password: "password123"
-          cgpa: 8.5
-          skills: ["JavaScript", "React"]
-          resumeUrl: "https://example.com/resume.pdf"
-        ) {
-          token
-          user {
-            id
-            name
-            email
-            role
-            cgpa
-          }
-        }
-      }
-    `;
+    const mutation = registerStudentMutation({
+      name: 'John Doe',
+      enrollmentNumber,
+      email,
+      personalEmail: `john.personal${Date.now()}@example.com`
+    });
 
     const res = await request(app)
       .post('/graphql')
@@ -73,11 +94,17 @@ describe('Authentication Tests', () => {
         registerStudent(
           name: "Jane Doe"
           enrollmentNumber: "EN99999"
+          branch: "Computer Science and Engineering"
           email: "jane@gmail.com"
-          password: "password123"
+          password: "Password@123"
           cgpa: 8.0
           skills: ["Python"]
           resumeUrl: "https://example.com/resume.pdf"
+          reportCardUrl: "https://example.com/report-card.pdf"
+          mobile: "9876543211"
+          category: GENERAL
+          personalEmail: "jane.personal@example.com"
+          gender: FEMALE
         ) {
           token
           user {
@@ -99,7 +126,7 @@ describe('Authentication Tests', () => {
   it('logs in with valid credentials', async () => {
     const mutation = `
       mutation {
-        login(email: "${email}", password: "password123") {
+        login(email: "${email}", password: "Password@123") {
           token
           user {
             id
@@ -166,11 +193,17 @@ describe('Job Application Tests', () => {
         registerStudent(
           name: "Test Student"
           enrollmentNumber: "TS${random}"
+          branch: "Computer Science and Engineering"
           email: "${email}"
-          password: "password123"
+          password: "Password@123"
           cgpa: 8.0
           skills: ["JavaScript"]
           resumeUrl: "https://example.com/resume.pdf"
+          reportCardUrl: "https://example.com/report-card.pdf"
+          mobile: "9876543212"
+          category: GENERAL
+          personalEmail: "test.personal${random}@example.com"
+          gender: MALE
         ) {
           token
           user {
@@ -201,6 +234,7 @@ describe('Job Application Tests', () => {
       data: {
         title: "Software Engineer",
         companyId: companyId,
+        description: "Software engineer role for backend and frontend development.",
         minCgpa: 7.5,
         requiredSkills: ["JavaScript"],
         status: "OPEN"
@@ -263,6 +297,7 @@ describe('Job Application Tests', () => {
       data: {
         title: "Senior Engineer",
         companyId: companyId,
+        description: "Senior engineer role requiring strong software fundamentals.",
         minCgpa: 9.0,
         requiredSkills: ["JavaScript"],
         status: "OPEN"
@@ -296,6 +331,7 @@ describe('Job Application Tests', () => {
       data: {
         title: "Closed Position",
         companyId: companyId,
+        description: "Closed position used for application validation testing.",
         minCgpa: 7.0,
         requiredSkills: ["JavaScript"],
         status: "CLOSED"
@@ -318,7 +354,7 @@ describe('Job Application Tests', () => {
 
     expect(res.statusCode).toBe(200);
     expect(res.body.errors).toBeTruthy();
-    expect(res.body.errors[0].message).toContain("closed");
+    expect(res.body.errors[0].message).toContain("no longer accepting");
 
     // Cleanup
     await prisma.job.delete({ where: { id: closedJob.id } });
@@ -344,6 +380,8 @@ describe('Job Application Tests', () => {
 describe('Access Control Tests', () => {
   let adminToken;
   let studentToken;
+  let adminId;
+  let studentId;
 
   beforeAll(async () => {
     // Create admin
@@ -351,26 +389,28 @@ describe('Access Control Tests', () => {
       data: {
         name: "Admin User",
         email: `admin${Date.now()}@nitsri.ac.in`,
-        password: await (await import('../utils/auth')).hashPassword("admin123"),
+        password: await hashPassword("Admin@123"),
         role: "ADMIN",
         cgpa: 0,
         skills: []
       }
     });
-    adminToken = (await import('../utils/auth')).generateToken(admin);
+    adminId = admin.id;
+    adminToken = generateToken(admin);
 
     // Create student
     const student = await prisma.user.create({
       data: {
         name: "Test Student",
         email: `student${Date.now()}@nitsri.ac.in`,
-        password: await (await import('../utils/auth')).hashPassword("student123"),
+        password: await hashPassword("Student@123"),
         role: "STUDENT",
         cgpa: 8.0,
         skills: ["Test"]
       }
     });
-    studentToken = (await import('../utils/auth')).generateToken(student);
+    studentId = student.id;
+    studentToken = generateToken(student);
   });
 
   it('allows admin to access all users', async () => {
@@ -418,7 +458,7 @@ describe('Access Control Tests', () => {
   afterAll(async () => {
     await prisma.user.deleteMany({
       where: {
-        email: { contains: Date.now().toString() }
+        id: { in: [adminId, studentId].filter(Boolean) }
       }
     });
     await prisma.$disconnect();

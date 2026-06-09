@@ -1,3 +1,4 @@
+require('dotenv').config();
 const express = require('express');
 const { ApolloServer } = require('@apollo/server');
 const { expressMiddleware } = require('@apollo/server/express4');
@@ -5,9 +6,8 @@ const cors = require('cors');
 const bodyParser = require('body-parser');
 const { generalRateLimiter } = require('./utils/rateLimiter');
 const { buildContext } = require('./middleware/auth');
-const { logSystem } = require('./utils/logger');
+const { logger, logSystem } = require('./utils/logger');
 const schema = require('./graphql/schema');
-require('dotenv').config();
 
 // Email queue worker
 let emailWorkerClose;
@@ -102,31 +102,33 @@ async function startServer() {
     if (worker) {
       const { shutdown } = require('./workers/emailWorker');
       emailWorkerClose = shutdown;
-      console.log('📧 Email queue worker started');
+      logger.info('Email queue worker started');
     }
   } catch (error) {
-    console.warn('⚠️  Email worker not started (Redis may be unavailable):', error.message);
+    logger.warn('Email worker not started; Redis may be unavailable', { error: error.message });
   }
 
   app.listen(PORT, () => {
     logSystem.startup();
-    console.log(`🚀 Server running on http://localhost:${PORT}/graphql`);
-    console.log(`🏥 Health check: http://localhost:${PORT}/health`);
-    console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
+    logger.info('Server listening', {
+      graphqlUrl: `http://localhost:${PORT}/graphql`,
+      healthUrl: `http://localhost:${PORT}/health`,
+      environment: process.env.NODE_ENV || 'development'
+    });
   });
 
   // Graceful shutdown
   const shutdown = async () => {
     logSystem.shutdown();
-    console.log('Shutting down gracefully...');
+    logger.info('Shutting down gracefully');
 
     // Close email worker
     if (emailWorkerClose) {
       try {
         await emailWorkerClose();
-        console.log('📧 Email worker stopped');
+        logger.info('Email worker stopped');
       } catch (err) {
-        console.error('Error stopping email worker:', err.message);
+        logger.error('Error stopping email worker', { error: err.message });
       }
     }
 

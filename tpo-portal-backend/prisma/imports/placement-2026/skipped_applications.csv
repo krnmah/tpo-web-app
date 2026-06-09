@@ -1,0 +1,16 @@
+sheetName,rowNumber,enrollmentNumber,company,role,reason
+Civil Engineering,108,2022BCIV117,L&T,GET,student_not_in_user_csv
+Electrical Engineering,14,2022BELE012,Averixis,BDA,student_not_in_user_csv
+Electrical Engineering,36,2022BELE036,Aditya Birla Group,GET,student_not_in_user_csv
+Electronics and Communication E,6,2022BECE005,P3C Tech,R&D,student_not_in_user_csv
+Electronics and Communication E,18,2022BECE020,Sri Chaitanya,Associate Lecturer,student_not_in_user_csv
+Electronics and Communication E,76,2022BECE083,Tavant,SDE,student_not_in_user_csv
+Electronics and Communication E,78,2022BECE085,Accenture,AEH,student_not_in_user_csv
+Electronics and Communication E,88,2022BECE095,Nyeras edutec,BD,student_not_in_user_csv
+Electronics and Communication E,89,2022BECE096,DarwixAI,Campus Hire,student_not_in_user_csv
+Electronics and Communication E,92,2022BECE099,averixis,BDA,student_not_in_user_csv
+Information Technology,65,2022BITE062,Accenture,AEH,student_not_in_user_csv
+Metallurgical and Materials Eng,25,2022BMME026,Acmegrade,BDA,student_not_in_user_csv
+Metallurgical and Materials Eng,72,2022BMME075,Averix Solutions,BDA,student_not_in_user_csv
+Mechanical Engineering,3,2021-22BMEC086,Averixis,BDA,student_not_in_user_csv
+Mechanical Engineering,85,2022BMEC093,PW,FACULTY,student_not_in_user_csv

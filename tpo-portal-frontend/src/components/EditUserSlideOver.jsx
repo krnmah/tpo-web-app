@@ -2,6 +2,7 @@ import { useState, useMemo, useEffect } from 'react';
 import { useMutation } from '@apollo/client';
 import { X } from './Icons';
 import { ADMIN_UPDATE_USER, GET_STUDENTS, CATEGORY_ENUM, GENDER_ENUM } from '../graphql/queries';
+import { BRANCHES, normalizeBranchName } from '../constants/branches';
 
 const enrollmentRegex = /^\d{4}[A-Z]{4}\d{3}$/; // Format: 2022BCSE123
 
@@ -12,17 +13,6 @@ const validateEnrollment = (value) => {
   }
   return null;
 };
-
-const branches = [
-  "Chemical Engineering",
-  "Civil Engineering",
-  "Computer Science and Engineering",
-  "Electrical Engineering",
-  "Electronics and Communication Engineering",
-  "Information Technology",
-  "Mechanical Engineering",
-  "Metallurgical and Materials Engineering"
-];
 
 export default function EditUserSlideOver({ isOpen, user, onClose, onSuccess, onError }) {
   const [editForm, setEditForm] = useState({
@@ -40,7 +30,7 @@ export default function EditUserSlideOver({ isOpen, user, onClose, onSuccess, on
       setEditForm({
         name: user.name || '',
         enrollmentNumber: user.enrollmentNumber || '',
-        branch: user.branch || '',
+        branch: normalizeBranchName(user.branch),
         category: user.category || '',
         gender: user.gender || ''
       });
@@ -52,7 +42,6 @@ export default function EditUserSlideOver({ isOpen, user, onClose, onSuccess, on
     refetchQueries: [{ query: GET_STUDENTS }],
     awaitRefetchQueries: true,
     onCompleted: (data) => {
-      console.log('Mutation completed:', data);
       // Call success callback first
       if (data?.adminUpdateUser) {
         onSuccess?.(data.adminUpdateUser);
@@ -73,7 +62,6 @@ export default function EditUserSlideOver({ isOpen, user, onClose, onSuccess, on
       onClose();
     },
     onError: (error) => {
-      console.error('Mutation error:', error);
       setFormError(error.message);
       onError?.(error.message);
     }
@@ -226,7 +214,7 @@ export default function EditUserSlideOver({ isOpen, user, onClose, onSuccess, on
               disabled={loading}
             >
               <option value="">Select branch</option>
-              {branches.map((branch) => (
+              {BRANCHES.map((branch) => (
                 <option key={branch} value={branch}>
                   {branch}
                 </option>

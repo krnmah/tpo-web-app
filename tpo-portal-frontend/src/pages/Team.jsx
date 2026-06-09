@@ -1,13 +1,11 @@
 import { Link } from "react-router-dom";
 import { useState, useEffect, useRef } from "react";
 import SharedHeader from "../components/SharedHeader";
-
-// Team photos from public folder
-const aijazPhoto = "/aijaz.png";
-const syedPhoto = "/syed.png";
-const umerPhoto = "/umer.png";
-const siddharthPhoto = "/siddharth.png";
-const karanPhoto = "/karan.png";
+import aijazPhoto from "../assets/images/team/aijaz.png";
+import karanPhoto from "../assets/images/team/karan.png";
+import siddharthPhoto from "../assets/images/team/siddharth.png";
+import syedPhoto from "../assets/images/team/syed.png";
+import umerPhoto from "../assets/images/team/umer.png";
 
 // Fade In Component for scroll animations
 const FadeIn = ({ children, delay = 0 }) => {

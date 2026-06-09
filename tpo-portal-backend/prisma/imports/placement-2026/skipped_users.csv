@@ -1,0 +1,64 @@
+rowNumber,enrollmentNumber,email,reason
+336,2022BELE050,jamkar_2022bele050@nitsri.ac.in,older_duplicate_enrollment
+327,2022BELE030,pramarsh_2022bele030@nitsri.ac.in,older_duplicate_enrollment
+422,2022BECE005,nikhel_2022bece005@nitsri.ac.in,older_duplicate_enrollment
+539,2022BITE024,sahil_2022bite024@nitsri.ac.in,older_duplicate_enrollment
+630,2022BMEC041,soheb_2022bmec041@nitsri.ac.in,older_duplicate_enrollment
+792,,,missing_enrollment_number
+793,,,missing_enrollment_number
+605,2019-22BITE009,nitsri@gmail.com,invalid_institute_email
+696,2021-22BMEC086,not made,invalid_institute_email
+69,2022BCHE023,director@nitsri.net,invalid_institute_email
+23,2022BCHE033,aditi_2022bche033@nitsri.ac.im,invalid_institute_email
+31,2022BCHE044,aryan_2022bche044,invalid_institute_email
+34,2022BCHE048,hritik_2022bche048nitsri.ac.in,invalid_institute_email
+791,2022BCHE080,shadab_2022bche080@nitsri.ac.in.,invalid_institute_email
+54,2022BCHE090,karan_2022bche090nitsri.ac.in,invalid_institute_email
+78,2022BCIV001,adha_2022bciv001@gmail.com,invalid_institute_email
+216,2022BCIV003,2,invalid_institute_email
+201,2022BCIV009,2022,invalid_institute_email
+146,2022BCIV116,mhalamo_2022bciv116nitsri.ac.in,invalid_institute_email
+147,2022BCIV117,kankantiswathi@gmail.com,invalid_institute_email
+172,2022BCIV155,nitsafeer@gmail.com,invalid_institute_email
+257,2022BCSE029,parteet_2022bcse029@nitsri.ac,invalid_institute_email
+516,2022BECE005,santhosharyan@gmail.com,invalid_institute_email
+433,2022BECE020,owais _2022bece020@nitsri.ac .in,invalid_institute_email
+517,2022BECE031,sakshamthakyal9782@gmail.com,invalid_institute_email
+515,2022BECE055,kunsothpreethika@gmail.com,invalid_institute_email
+499,2022BECE064,aqiraliaqir@gmail.com,invalid_institute_email
+510,2022BECE069,manipatikushala@gmail.com,invalid_institute_email
+474,2022BECE081,fazilbhat869@gmail.com,invalid_institute_email
+508,2022BECE083,arpit_2022bece083@nitsri.ac,invalid_institute_email
+511,2022BECE085,mandadipavansai.23@gmail.com,invalid_institute_email
+478,2022BECE087,varsha_2022bece087@gmail.com,invalid_institute_email
+486,2022BECE096,not there,invalid_institute_email
+498,2022BECE097,jayanthilasya@gmail.com,invalid_institute_email
+488,2022BECE099,i don't have college email,invalid_institute_email
+378,2022BELE009,singh77808@gmail.com,invalid_institute_email
+384,2022BELE012,nit sringar,invalid_institute_email
+416,2022BELE015,deepanuj437@gmail.com,invalid_institute_email
+388,2022BELE017,sharif _ 2022bele017@nitsri.ac.in,invalid_institute_email
+323,2022BELE021,sharafat_2022bele021@nitsri.ac,invalid_institute_email
+328,2022BELE031,agnivo.das.pune@gmail.com,invalid_institute_email
+329,2022BELE033,tabasum_2022bele033nitsri.ac.in,invalid_institute_email
+330,2022BELE036,ismat_2022bele036@nitsri.ac.in (access not given yet ),invalid_institute_email
+415,2022BELE048,mubashir_2022bele048@nitsti.ac.in,invalid_institute_email
+338,2022BELE052,thotadevisree@gmail.com,invalid_institute_email
+419,2022BELE065,nil,invalid_institute_email
+417,2022BELE088,arao60557@gmail.com,invalid_institute_email
+599,2022BITE017,fayaz_2022bite017,invalid_institute_email
+536,2022BITE021,kanchan_2022bite021,invalid_institute_email
+602,2022BITE037,urajeshwar4@gmail.com,invalid_institute_email
+572,2022BITE062,vivekrathore_2022bite062@gmail.com,invalid_institute_email
+580,2022BITE070,goginasriram070@gmail.com,invalid_institute_email
+590,2022BITE085,hodit@nitsri.net,invalid_institute_email
+636,2022BMEC047,gyanesh_2022bmec047@nit.ac.in,invalid_institute_email
+639,2022BMEC051,na,invalid_institute_email
+707,2022BMEC054,suryabuddyreddy@gmail.com,invalid_institute_email
+706,2022BMEC070,far8618@gmail.com,invalid_institute_email
+703,2022BMEC083,gadaripoornima@gmail.com,invalid_institute_email
+663,2022BMEC093,saurabh_2022bmec093@nitsri.ac.in as,invalid_institute_email
+693,2022BMEC104,yerra_2022bmec104@nitsri.ac,invalid_institute_email
+790,2022BMME026,shravaneetakale@gmail.com,invalid_institute_email
+740,2022BMME067,rahul_2022bmme067@gmail.com,invalid_institute_email
+750,2022BMME083,bhukyanikhil1431@gmail.com,invalid_institute_email

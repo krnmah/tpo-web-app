@@ -1,4 +1,5 @@
 const z = require('zod');
+const { branchSchema } = require('./branches');
 
 // Email validation schema - must be @nitsri.ac.in
 const emailSchema = z.string()
@@ -47,7 +48,7 @@ const urlSchema = z
 const registerSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters'),
   enrollmentNumber: z.string().min(1, 'Enrollment number is required'),
-  branch: z.string().min(1, 'Branch is required'),
+  branch: branchSchema,
   email: emailSchema,
   password: passwordSchema,
   cgpa: cgpaSchema,
@@ -76,7 +77,7 @@ const createJobSchema = z.object({
   description: z.string().min(20, 'Description must be at least 20 characters'),
   minCgpa: cgpaSchema,
   requiredSkills: z.array(z.string()).min(1, 'At least one skill is required'),
-  eligibleBranches: z.array(z.string()).min(1, 'At least one eligible branch is required')
+  eligibleBranches: z.array(branchSchema).min(1, 'At least one eligible branch is required')
 });
 
 // Company creation validation schema

@@ -227,7 +227,7 @@ const StudentDashboard = () => {
                                   return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
                                 }
                               } catch {
-                                console.log('Invalid date:', app.createdAt);
+                                // Fall through to the default label below.
                               }
                               return 'Recently';
                             })()

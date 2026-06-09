@@ -1,4 +1,5 @@
 import { useQuery, useMutation } from "@apollo/client";
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import { GET_ELIGIBLE_JOBS, APPLY_FOR_JOB, GET_MY_APPLICATIONS } from "../../graphql/queries";
 import { getSalaryDisplay } from "../../utils/formatCurrency";
@@ -9,6 +10,7 @@ import {
 } from "../../components/Icons";
 
 const EligibleCompanies = () => {
+  const [errorMessage, setErrorMessage] = useState("");
   const { data, loading, refetch } = useQuery(GET_ELIGIBLE_JOBS, {
     fetchPolicy: "network-only"
   });
@@ -22,10 +24,11 @@ const EligibleCompanies = () => {
 
   const handleApply = async (jobId) => {
     try {
+      setErrorMessage("");
       await applyJob({ variables: { jobId } });
       await Promise.all([refetch(), refetchApplications()]);
     } catch (err) {
-      alert(err.message);
+      setErrorMessage(err.message || "Failed to apply for job");
     }
   };
 
@@ -53,6 +56,12 @@ const EligibleCompanies = () => {
           <p className="text-sm text-gray-500 mt-1">Positions you qualify for based on your CGPA & branch</p>
         </div>
       </div>
+
+      {errorMessage && (
+        <div className="rounded-lg border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-700">
+          {errorMessage}
+        </div>
+      )}
 
       {/* Empty State */}
       {jobs.length === 0 && !loading ? (

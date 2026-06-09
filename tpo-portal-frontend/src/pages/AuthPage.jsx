@@ -3,8 +3,9 @@ import { useNavigate, useSearchParams, Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { REGISTER_STUDENT, SEND_PASSWORD_RESET_OTP, VERIFY_OTP_AND_RESET_PASSWORD, SEND_EMAIL_VERIFICATION_OTP, VERIFY_EMAIL_OTP, CATEGORY_ENUM, GENDER_ENUM } from "../graphql/queries";
 import { useMutation } from "@apollo/client";
-import nitsLogo from "../assets/nitslogo.png";
+import nitsLogo from "../assets/images/brand/nitslogo.png";
 import ParticleBackground from "../components/ParticleBackground";
+import { BRANCHES } from "../constants/branches";
 
 const DOMAIN = "@nitsri.ac.in";
 
@@ -168,7 +169,12 @@ const AuthPage = () => {
   const { login } = useAuth();
 
   const [error, setError] = useState("");
+  const [successMessage, setSuccessMessage] = useState("");
   const [loading, setLoading] = useState(false);
+  const [signupOtpSending, setSignupOtpSending] = useState(false);
+  const [signupOtpVerifying, setSignupOtpVerifying] = useState(false);
+  const [resetOtpSending, setResetOtpSending] = useState(false);
+  const [resetOtpVerifying, setResetOtpVerifying] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
@@ -211,17 +217,6 @@ const AuthPage = () => {
     gender: ""
   });
 
-  const branches = [
-    "Chemical Engineering",
-    "Civil Engineering",
-    "Computer Science and Engineering",
-    "Electrical Engineering",
-    "Electronics and Communication Engineering",
-    "Information Technology",
-    "Mechanical Engineering",
-    "Metallurgical and Materials Engineering"
-  ];
-
   const [registerStudent] = useMutation(REGISTER_STUDENT);
   const [sendPasswordResetOTP] = useMutation(SEND_PASSWORD_RESET_OTP);
   const [verifyOTPAndResetPassword] = useMutation(VERIFY_OTP_AND_RESET_PASSWORD);
@@ -244,6 +239,11 @@ const AuthPage = () => {
   const handleTabChange = (tab) => {
     setActiveTab(tab);
     setError("");
+    setSuccessMessage("");
+    setSignupOtpSending(false);
+    setSignupOtpVerifying(false);
+    setResetOtpSending(false);
+    setResetOtpVerifying(false);
     if (tab === "signup") {
       setSignupStep(1);
       setVerifiedEmail("");
@@ -281,7 +281,7 @@ const AuthPage = () => {
       return;
     }
 
-    setLoading(true);
+    setSignupOtpSending(true);
     setError("");
 
     try {
@@ -297,8 +297,9 @@ const AuthPage = () => {
       }
     } catch (err) {
       setError(err.message || "Failed to send OTP. Please try again.");
+    } finally {
+      setSignupOtpSending(false);
     }
-    setLoading(false);
   };
 
   // Verify email OTP
@@ -311,7 +312,7 @@ const AuthPage = () => {
       return;
     }
 
-    setLoading(true);
+    setSignupOtpVerifying(true);
     setError("");
 
     try {
@@ -327,8 +328,9 @@ const AuthPage = () => {
       }
     } catch (err) {
       setError(err.message || "OTP verification failed. Please try again.");
+    } finally {
+      setSignupOtpVerifying(false);
     }
-    setLoading(false);
   };
 
   // Reset signup flow
@@ -337,6 +339,8 @@ const AuthPage = () => {
     setVerifiedEmail("");
     setSignupOtp("");
     setSignupOtpSent(false);
+    setSignupOtpSending(false);
+    setSignupOtpVerifying(false);
     setSignupData(prev => ({ ...prev, emailPrefix: "" }));
     setError("");
   };
@@ -347,6 +351,7 @@ const AuthPage = () => {
   const handleStartPasswordReset = () => {
     setShowPasswordReset(true);
     setError("");
+    setSuccessMessage("");
   };
 
   const handleCancelPasswordReset = () => {
@@ -357,6 +362,8 @@ const AuthPage = () => {
     setResetNewPassword("");
     setResetConfirmPassword("");
     setResetResendCountdown(0);
+    setResetOtpSending(false);
+    setResetOtpVerifying(false);
     setError("");
   };
 
@@ -366,7 +373,7 @@ const AuthPage = () => {
       return;
     }
 
-    setLoading(true);
+    setResetOtpSending(true);
     setError("");
 
     try {
@@ -382,8 +389,9 @@ const AuthPage = () => {
       }
     } catch (err) {
       setError(err.message || "Failed to send OTP. Please try again.");
+    } finally {
+      setResetOtpSending(false);
     }
-    setLoading(false);
   };
 
   const handleVerifyResetOTP = async () => {
@@ -404,7 +412,7 @@ const AuthPage = () => {
       return;
     }
 
-    setLoading(true);
+    setResetOtpVerifying(true);
     setError("");
 
     try {
@@ -419,24 +427,22 @@ const AuthPage = () => {
 
       if (result.errors) {
         setError(result.errors[0].message);
-        setLoading(false);
       } else {
-        // Password reset successful - show success and go back to login
         setError("");
-        setLoading(false);
         handleCancelPasswordReset();
-        // Show success alert
-        alert("Password reset successful! Please login with your new password.");
+        setSuccessMessage("Password reset successful. Please login with your new password.");
       }
     } catch (err) {
       setError(err.message || "Failed to reset password. Please try again.");
-      setLoading(false);
+    } finally {
+      setResetOtpVerifying(false);
     }
   };
 
   const handleLogin = async (e) => {
     e.preventDefault();
     setError("");
+    setSuccessMessage("");
     setLoading(true);
 
     if (!loginEmail || loginEmail.trim().length === 0) {
@@ -467,8 +473,8 @@ const AuthPage = () => {
 
   const handleSignup = async (e) => {
     e.preventDefault();
-    console.log("handleSignup called", { signupData, verifiedEmail });
     setError("");
+    setSuccessMessage("");
     setLoading(true);
 
     // Validate all fields using the validators
@@ -633,6 +639,21 @@ const AuthPage = () => {
                 </div>
               )}
 
+              {successMessage && (
+                <div className="mb-6 flex items-start gap-3 p-3 bg-emerald-50 border border-emerald-200 rounded-lg">
+                  <span className="text-emerald-600 flex-shrink-0 mt-0.5">
+                    <CheckIcon />
+                  </span>
+                  <p className="text-sm text-emerald-700 flex-1">{successMessage}</p>
+                  <button
+                    onClick={() => setSuccessMessage("")}
+                    className="text-emerald-500 hover:text-emerald-700 transition-colors duration-200"
+                  >
+                    <CloseIcon />
+                  </button>
+                </div>
+              )}
+
               {/* Login Form */}
               {activeTab === "login" && !showPasswordReset && (
                 <form onSubmit={handleLogin} className="space-y-5">
@@ -751,10 +772,10 @@ const AuthPage = () => {
                       </div>
                       <button
                         onClick={handleSendResetOTP}
-                        disabled={loading}
+                        disabled={resetOtpSending}
                         className="w-full px-6 py-3 rounded-lg text-sm font-semibold text-white transition-all duration-200 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-slate-900 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed bg-slate-900 hover:bg-slate-800"
                       >
-                        {loading ? (
+                        {resetOtpSending ? (
                           <span className="flex items-center justify-center gap-2">
                             <Spinner />
                             Sending OTP...
@@ -840,10 +861,10 @@ const AuthPage = () => {
 
                       <button
                         onClick={handleVerifyResetOTP}
-                        disabled={loading}
+                        disabled={resetOtpVerifying || resetOtpSending}
                         className="w-full px-6 py-3 rounded-lg text-sm font-semibold text-white transition-all duration-200 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-slate-900 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed bg-slate-900 hover:bg-slate-800"
                       >
-                        {loading ? (
+                        {resetOtpVerifying ? (
                           <span className="flex items-center justify-center gap-2">
                             <Spinner />
                             Resetting...
@@ -861,10 +882,10 @@ const AuthPage = () => {
                           <button
                             type="button"
                             onClick={handleSendResetOTP}
-                            disabled={loading}
+                            disabled={resetOtpSending || resetOtpVerifying}
                             className="text-slate-900 hover:underline font-medium"
                           >
-                            Resend OTP
+                            {resetOtpSending ? "Resending..." : "Resend OTP"}
                           </button>
                         )}
                       </div>
@@ -913,10 +934,10 @@ const AuthPage = () => {
                         <button
                           type="button"
                           onClick={handleSendSignupOTP}
-                          disabled={loading}
+                          disabled={signupOtpSending}
                           className="w-full px-6 py-3 rounded-lg text-sm font-semibold text-white transition-all duration-200 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-slate-900 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed bg-slate-900 hover:bg-slate-800"
                         >
-                          {loading ? (
+                          {signupOtpSending ? (
                             <span className="flex items-center justify-center gap-2">
                               <Spinner />
                               Sending OTP...
@@ -952,10 +973,10 @@ const AuthPage = () => {
                           <button
                             type="button"
                             onClick={handleVerifySignupOTP}
-                            disabled={loading}
+                            disabled={signupOtpVerifying || signupOtpSending}
                             className="w-full px-6 py-3 rounded-lg text-sm font-semibold text-white transition-all duration-200 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-slate-900 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed bg-slate-900 hover:bg-slate-800"
                           >
-                            {loading ? (
+                            {signupOtpVerifying ? (
                               <span className="flex items-center justify-center gap-2">
                                 <Spinner />
                                 Verifying...
@@ -973,10 +994,10 @@ const AuthPage = () => {
                               <button
                                 type="button"
                                 onClick={handleSendSignupOTP}
-                                disabled={loading}
+                                disabled={signupOtpSending || signupOtpVerifying}
                                 className="text-slate-900 hover:underline font-medium"
                               >
-                                Resend OTP
+                                {signupOtpSending ? "Resending..." : "Resend OTP"}
                               </button>
                             )}
                           </div>
@@ -1059,7 +1080,7 @@ const AuthPage = () => {
                           required
                         >
                           <option value="" disabled>Select your branch</option>
-                          {branches.map((branch) => (
+                          {BRANCHES.map((branch) => (
                             <option key={branch} value={branch}>
                               {branch}
                             </option>
@@ -1301,10 +1322,6 @@ const AuthPage = () => {
                       <button
                         type="submit"
                         disabled={loading}
-                        // eslint-disable-next-line no-unused-vars
-                        onClick={(e) => {
-                          console.log("Button clicked");
-                        }}
                         className="w-full px-6 py-3 rounded-lg text-sm font-semibold text-white transition-all duration-200 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-slate-900 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed bg-slate-900 hover:bg-slate-800 mt-2 cursor-pointer"
                       >
                         {loading ? (

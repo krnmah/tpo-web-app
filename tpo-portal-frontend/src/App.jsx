@@ -1,124 +1,159 @@
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
+import { lazy, Suspense } from "react";
 import { useAuth } from "./context/AuthContext";
 import { AuthProvider } from "./context/AuthContext";
 import { ConfirmDialogProvider } from "./components/ConfirmDialog";
-import Home from "./pages/Home";
-import About from "./pages/About";
-import Team from "./pages/Team";
-import Contact from "./pages/Contact";
-import AuthPage from "./pages/AuthPage";
-import StudentLayout from "./pages/student/StudentLayout";
-import Profile from "./pages/student/Profile";
-import AllJobs from "./pages/student/AllCompanies";
-import EligibleCompanies from "./pages/student/EligibleCompanies";
-import Applications from "./pages/student/ApplicationTracker";
-import StudentDashboard from "./pages/student/StudentDashboard";
-import NOCSection from "./pages/student/NOCSection";
-import CRCDashboard from "./pages/crc/CRCDashboard";
-import AdminDashboard from "./pages/admin/AdminDashboard";
-import { useEffect } from "react";
 
-// Log route changes
-function RouteLogger() {
-  const location = useLocation();
-  useEffect(() => {
-    console.log('📍 Route changed to:', location.pathname);
-  }, [location]);
-  return null;
+const Home = lazy(() => import("./pages/Home"));
+const About = lazy(() => import("./pages/About"));
+const Team = lazy(() => import("./pages/Team"));
+const Contact = lazy(() => import("./pages/Contact"));
+const AuthPage = lazy(() => import("./pages/AuthPage"));
+const StudentLayout = lazy(() => import("./pages/student/StudentLayout"));
+const Profile = lazy(() => import("./pages/student/Profile"));
+const AllJobs = lazy(() => import("./pages/student/AllCompanies"));
+const EligibleCompanies = lazy(() => import("./pages/student/EligibleCompanies"));
+const Applications = lazy(() => import("./pages/student/ApplicationTracker"));
+const StudentDashboard = lazy(() => import("./pages/student/StudentDashboard"));
+const NOCSection = lazy(() => import("./pages/student/NOCSection"));
+const AdminDashboard = lazy(() => import("./pages/admin/AdminDashboard"));
+const CRCDashboardHome = lazy(() => import("./pages/crc/CRCDashboardHome"));
+const CRCCompaniesPage = lazy(() => import("./pages/crc/CRCCompaniesPage"));
+const CRCJobsPage = lazy(() => import("./pages/crc/CRCJobsPage"));
+const CRCApplicationsPage = lazy(() => import("./pages/crc/CRCApplicationsPage"));
+
+function PageFallback() {
+  return (
+    <div className="min-h-screen bg-white flex items-center justify-center text-sm text-slate-500">
+      Loading...
+    </div>
+  );
 }
 
 function ProtectedRoute({ children, allowedRoles }) {
   const { isAuthenticated, user } = useAuth();
+  const location = useLocation();
 
-  // Check localStorage directly as the primary auth check
-  const hasToken = localStorage.getItem('token');
-  const hasStoredUser = localStorage.getItem('user');
-
-  console.log('🔒 ProtectedRoute check:', {
-    isAuthenticated,
-    hasToken: !!hasToken,
-    hasStoredUser: !!hasStoredUser,
-    userRole: user?.role,
-    path: window.location.pathname
-  });
+  const hasToken = localStorage.getItem("token");
+  const hasStoredUser = localStorage.getItem("user");
 
   const isActuallyAuthed = isAuthenticated || (hasToken && hasStoredUser);
 
   if (!isActuallyAuthed) {
-    console.log('❌ Not authenticated, redirecting to /auth');
-    return <Navigate to="/auth" replace />;
+    return <Navigate to="/auth" replace state={{ from: location }} />;
   }
 
-  // Parse stored user if context user is not available yet
-  const userToCheck = user || (hasStoredUser ? JSON.parse(hasStoredUser) : null);
+  let storedUser = null;
+  if (!user && hasStoredUser) {
+    try {
+      storedUser = JSON.parse(hasStoredUser);
+    } catch {
+      localStorage.removeItem("token");
+      localStorage.removeItem("user");
+      return <Navigate to="/auth" replace state={{ from: location }} />;
+    }
+  }
 
-  // Check if user's role is in the allowed roles array
+  const userToCheck = user || storedUser;
+
   if (allowedRoles && userToCheck && !allowedRoles.includes(userToCheck.role)) {
-    console.log('⛔ Role not allowed, redirecting. User role:', userToCheck.role, 'Allowed:', allowedRoles);
-    if (userToCheck.role === 'ADMIN') {
+    if (userToCheck.role === "ADMIN") {
       return <Navigate to="/admin/dashboard" replace />;
-    } else if (userToCheck.role === 'CRC') {
+    }
+    if (userToCheck.role === "CRC") {
       return <Navigate to="/crc/dashboard" replace />;
     }
     return <Navigate to="/auth" replace />;
   }
 
-  console.log('✅ Authenticated, rendering children');
   return children;
 }
 
 function AppRoutes() {
   return (
-    <Routes>
-      <Route path="/" element={<Navigate to="/home" replace />} />
-      <Route path="/home" element={<Home />} />
-      <Route path="/about" element={<About />} />
-      <Route path="/team" element={<Team />} />
-      <Route path="/contact" element={<Contact />} />
-      <Route path="/auth" element={<AuthPage />} />
+    <Suspense fallback={<PageFallback />}>
+      <Routes>
+        <Route path="/" element={<Navigate to="/home" replace />} />
+        <Route path="/home" element={<Home />} />
+        <Route path="/about" element={<About />} />
+        <Route path="/team" element={<Team />} />
+        <Route path="/contact" element={<Contact />} />
+        <Route path="/auth" element={<AuthPage />} />
 
-      {/* Student & CRC Routes (CRC can access all student features) */}
-      <Route path="/student" element={
-        <ProtectedRoute allowedRoles={['STUDENT', 'CRC']}>
-          <StudentLayout />
-        </ProtectedRoute>
-      }>
-        <Route index element={<Navigate to="dashboard" replace />} />
-        <Route path="dashboard" element={<StudentDashboard />} />
-        <Route path="profile" element={<Profile />} />
-        <Route path="all-jobs" element={<AllJobs />} />
-        <Route path="eligible-companies" element={<EligibleCompanies />} />
-        <Route path="applications" element={<Applications />} />
-        <Route path="noc" element={<NOCSection />} />
-      </Route>
+        {/* Student & CRC Routes (CRC can access all student features) */}
+        <Route
+          path="/student"
+          element={
+            <ProtectedRoute allowedRoles={["STUDENT", "CRC"]}>
+              <StudentLayout />
+            </ProtectedRoute>
+          }
+        >
+          <Route index element={<Navigate to="dashboard" replace />} />
+          <Route path="dashboard" element={<StudentDashboard />} />
+          <Route path="profile" element={<Profile />} />
+          <Route path="all-jobs" element={<AllJobs />} />
+          <Route path="eligible-companies" element={<EligibleCompanies />} />
+          <Route path="applications" element={<Applications />} />
+          <Route path="noc" element={<NOCSection />} />
+        </Route>
 
-      {/* CRC Panel (CRC-specific management features) */}
-      <Route
-        path="/crc/dashboard"
-        element={
-          <ProtectedRoute allowedRoles={['CRC']}>
-            <CRCDashboard />
-          </ProtectedRoute>
-        }
-      />
+        {/* CRC Panel (CRC-specific management features) */}
+        <Route path="/crc" element={<Navigate to="/crc/dashboard" replace />} />
+        <Route
+          path="/crc/dashboard"
+          element={
+            <ProtectedRoute allowedRoles={["CRC"]}>
+              <CRCDashboardHome />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/crc/companies"
+          element={
+            <ProtectedRoute allowedRoles={["CRC"]}>
+              <CRCCompaniesPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/crc/jobs"
+          element={
+            <ProtectedRoute allowedRoles={["CRC"]}>
+              <CRCJobsPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/crc/applications"
+          element={
+            <ProtectedRoute allowedRoles={["CRC"]}>
+              <CRCApplicationsPage />
+            </ProtectedRoute>
+          }
+        />
 
-      {/* Admin Routes */}
-      <Route path="/admin" element={
-        <ProtectedRoute allowedRoles={['ADMIN']}>
-          <AdminDashboard />
-        </ProtectedRoute>
-      }>
-        <Route index element={<Navigate to="dashboard" replace />} />
-        <Route path="dashboard" element={<AdminDashboard />} />
-        <Route path="users" element={<AdminDashboard />} />
-        <Route path="companies" element={<AdminDashboard />} />
-        <Route path="crc" element={<AdminDashboard />} />
-        <Route path="stats" element={<AdminDashboard />} />
-      </Route>
+        {/* Admin Routes */}
+        <Route
+          path="/admin"
+          element={
+            <ProtectedRoute allowedRoles={["ADMIN"]}>
+              <AdminDashboard />
+            </ProtectedRoute>
+          }
+        >
+          <Route index element={<Navigate to="dashboard" replace />} />
+          <Route path="dashboard" element={<AdminDashboard />} />
+          <Route path="users" element={<AdminDashboard />} />
+          <Route path="companies" element={<AdminDashboard />} />
+          <Route path="crc" element={<AdminDashboard />} />
+          <Route path="stats" element={<AdminDashboard />} />
+        </Route>
 
-      {/* Fallback */}
-      <Route path="*" element={<Navigate to="/home" replace />} />
-    </Routes>
+        {/* Fallback */}
+        <Route path="*" element={<Navigate to="/home" replace />} />
+      </Routes>
+    </Suspense>
   );
 }
 
@@ -127,7 +162,6 @@ function App() {
     <AuthProvider>
       <ConfirmDialogProvider>
         <BrowserRouter>
-          <RouteLogger />
           <AppRoutes />
         </BrowserRouter>
       </ConfirmDialogProvider>

@@ -1,10 +1,12 @@
 import { useQuery, useMutation } from "@apollo/client";
+import { useState } from "react";
 import { GET_JOBS, APPLY_FOR_JOB, GET_MY_APPLICATIONS } from "../../graphql/queries";
 import { getSalaryDisplay } from "../../utils/formatCurrency";
 import { useAuth } from "../../context/AuthContext";
 
 const AllCompanies = () => {
   const { user, activeRole } = useAuth();
+  const [errorMessage, setErrorMessage] = useState("");
   const isCRCStudentView = user?.role === 'CRC' && activeRole === 'STUDENT';
 
   const { data, loading, refetch } = useQuery(GET_JOBS, {
@@ -22,11 +24,12 @@ const AllCompanies = () => {
 
   const handleApply = async (jobId) => {
     try {
+      setErrorMessage("");
       await applyJob({ variables: { jobId } });
       // Refetch both jobs and applications to update UI state
       await Promise.all([refetch(), refetchApplications()]);
     } catch (err) {
-      alert(err.message);
+      setErrorMessage(err.message || "Failed to apply for job");
     }
   };
 
@@ -43,6 +46,11 @@ const AllCompanies = () => {
   return (
     <div>
       <h1 className="text-2xl font-bold text-gray-800 mb-6">All Companies & Jobs</h1>
+      {errorMessage && (
+        <div className="mb-4 rounded-lg border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-700">
+          {errorMessage}
+        </div>
+      )}
       {jobs.length === 0 ? (
         <div className="bg-white p-6 rounded-lg shadow">
           <p className="text-gray-500">No open jobs available at the moment.</p>

@@ -413,7 +413,7 @@ async function sendIndividualJobEmail({ email, studentName, companyName, jobTitl
 
             <p>Login to the TNP Portal to view details and apply:</p>
             <p style="text-align: center;">
-              <a href="http://localhost:5173/student/jobs" class="btn">View Jobs</a>
+              <a href="${process.env.FRONTEND_URL || 'http://localhost:5173'}/student/all-jobs" class="btn">View Jobs</a>
             </p>
 
             <div class="footer">

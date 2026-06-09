@@ -126,7 +126,6 @@ const Profile = () => {
 
   const handleChangePassword = async (e) => {
     e.preventDefault();
-    console.log('handleSubmit called', passwordForm);
     setError("");
     setMessage("");
 
@@ -147,16 +146,12 @@ const Profile = () => {
       return;
     }
 
-    console.log('Submitting password change...');
-
     try {
       const result = await changePassword({
         variables: {
           newPassword: passwordForm.newPassword
         }
       });
-
-      console.log('Password change result:', result);
 
       // Check for errors in the result
       if (result.errors && result.errors.length > 0) {
@@ -172,7 +167,6 @@ const Profile = () => {
         setTimeout(() => setMessage(""), 3000);
       }
     } catch (err) {
-      console.error('Password change error:', err);
       // Extract GraphQL error message
       const errorMessage = err.graphQLErrors?.[0]?.message || err.message || "Failed to change password";
       setError(errorMessage);

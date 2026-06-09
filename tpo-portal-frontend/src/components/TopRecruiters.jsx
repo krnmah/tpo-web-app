@@ -1,17 +1,26 @@
 import { useEffect, useState } from "react";
+import amazonLogo from "../assets/images/recruiters/amazon.jpg";
+import fanaticsLogo from "../assets/images/recruiters/fanatics.png";
+import globalLogicLogo from "../assets/images/recruiters/globallogic.png";
+import googleLogo from "../assets/images/recruiters/google_new2.webp";
+import hsbcLogo from "../assets/images/recruiters/hsbc.jpg";
+import infosysLogo from "../assets/images/recruiters/infosys.png";
+import microsoftLogo from "../assets/images/recruiters/microsoft.webp";
+import optumLogo from "../assets/images/recruiters/optum.png";
+import oracleLogo from "../assets/images/recruiters/oracle.png";
+import tcsLogo from "../assets/images/recruiters/tcs.jpg";
 
-// Company data with local logo paths (served from public folder)
 const COMPANIES = [
-  { name: "Google", logo: "/google_new2.webp" },
-  { name: "Microsoft", logo: "/microsoft.webp" },
-  { name: "Amazon", logo: "/amazon.jpg" },
-  { name: "Infosys", logo: "/infosys.png" },
-  { name: "TCS", logo: "/tcs.jpg" },
-  { name: "HSBC", logo: "/hsbc.jpg" },
-  { name: "Optum", logo: "/optum.png" },
-  { name: "Oracle", logo: "/oracle.png" },
-  { name: "Fanatics", logo: "/fanatics.png" },
-  { name: "Global Logic", logo: "/globallogic.png" },
+  { name: "Google", logo: googleLogo },
+  { name: "Microsoft", logo: microsoftLogo },
+  { name: "Amazon", logo: amazonLogo },
+  { name: "Infosys", logo: infosysLogo },
+  { name: "TCS", logo: tcsLogo },
+  { name: "HSBC", logo: hsbcLogo },
+  { name: "Optum", logo: optumLogo },
+  { name: "Oracle", logo: oracleLogo },
+  { name: "Fanatics", logo: fanaticsLogo },
+  { name: "Global Logic", logo: globalLogicLogo },
 ];
 
 const TopRecruiters = () => {

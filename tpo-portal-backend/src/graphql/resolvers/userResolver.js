@@ -3,6 +3,7 @@ const { authorize, studentAccessCheck } = require('../../middleware/auth');
 const { sanitizeUser, isValidEmailDomain, validateUpdateProfile } = require('../../utils/validation');
 const { hashPassword } = require('../../utils/auth');
 const { logAudit, logger } = require('../../utils/logger');
+const { normalizeBranchName } = require('../../utils/branches');
 
 module.exports = {
   Query: {
@@ -278,6 +279,14 @@ module.exports = {
           }
           return acc;
         }, {});
+
+        if (updateData.branch !== undefined) {
+          const normalizedBranch = normalizeBranchName(updateData.branch);
+          if (!normalizedBranch) {
+            throw new Error('Invalid branch');
+          }
+          updateData.branch = normalizedBranch;
+        }
 
         if (Object.keys(updateData).length === 0) {
           throw new Error('No fields to update');

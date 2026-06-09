@@ -224,11 +224,6 @@ throw error;
         // Validate input
         const validated = validatePasswordReset(args);
 
-        // Find OTP
-        const otpRecord = await prisma.oTP.findUnique({
-          where: { id: 1 } // We'll search by email instead
-        });
-
         // Get the latest OTP for this email
         const latestOTP = await prisma.oTP.findFirst({
           where: { email: validated.email },

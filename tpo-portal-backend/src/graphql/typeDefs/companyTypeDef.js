@@ -7,6 +7,8 @@ type Company {
   createdAt: String!
   updatedAt: String!
   hasActiveJobs: Boolean!
+  activeJobCount: Int!
+  applicationCount: Int!
 }
 
 input CreateCompanyInput {

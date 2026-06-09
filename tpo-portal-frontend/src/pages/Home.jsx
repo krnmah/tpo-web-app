@@ -1,4 +1,5 @@
-import nitsImage from "../assets/nits.jpg";
+import nitsImage from "../assets/images/brand/nits.jpg";
+import tnpPolicyPdf from "../assets/documents/TnP-Policy.pdf";
 import TopRecruiters from "../components/TopRecruiters";
 import SharedHeader from "../components/SharedHeader";
 
@@ -58,7 +59,7 @@ const Home = () => {
           <span>© 2026 Training & Placement Department</span>
           <span className="hidden sm:inline text-gray-300">|</span>
           <a
-            href="/TnP-Policy.pdf"
+            href={tnpPolicyPdf}
             target="_blank"
             rel="noopener noreferrer"
             className="text-blue-600 hover:text-blue-700 hover:underline font-medium transition-colors"

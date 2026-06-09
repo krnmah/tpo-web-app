@@ -1,14 +1,14 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useQuery, useMutation } from "@apollo/client";
 import { useAuth } from "../../context/AuthContext";
-import { client } from "../../graphql/client";
-import { useNavigate } from "react-router-dom";
+import { NavLink, useNavigate } from "react-router-dom";
 import { useConfirm } from "../../components/ConfirmDialog";
 import { GET_MY_ASSIGNED_COMPANIES } from "../../graphql/queries";
 import { GET_JOBS, CREATE_JOB, CLOSE_JOB, UPDATE_JOB, DELETE_JOB } from "../../graphql/queries";
 import { GET_APPLICATIONS_BY_COMPANY, UPDATE_APPLICATION_STATUS } from "../../graphql/queries";
 import { CREATE_MY_COMPANY } from "../../graphql/queries";
 import { getSalaryDisplay, getRequiredFields, validateSalaryFields } from "../../utils/formatCurrency";
+import { BRANCHES } from "../../constants/branches";
 import * as XLSX from "xlsx";
 import {
   LayoutDashboard,
@@ -28,12 +28,11 @@ import {
   Menu,
 } from "../../components/Icons";
 
-const CRCDashboard = () => {
+const CRCDashboard = ({ activeTab = "dashboard" }) => {
   const { user, activeRole, toggleRole, logout } = useAuth();
   const navigate = useNavigate();
   const confirm = useConfirm();
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState("dashboard");
   const [applicationsModalState, setApplicationsModalState] = useState({ isOpen: false, companyId: null, companyName: '' });
   const [showJobForm, setShowJobForm] = useState(false);
   const [editingJob, setEditingJob] = useState(null);
@@ -42,7 +41,6 @@ const CRCDashboard = () => {
   const [showCompanyForm, setShowCompanyForm] = useState(false);
   const [newCompany, setNewCompany] = useState({ name: "", description: "" });
   const [skillsInput, setSkillsInput] = useState("");
-  const [companyApplicationCounts, setCompanyApplicationCounts] = useState({});
 
   const handleLogout = async () => {
     const confirmed = await confirm(
@@ -68,32 +66,6 @@ const CRCDashboard = () => {
   const companies = companiesData?.myCompanies || [];
   const jobs = allJobsData?.jobs || [];
 
-  // Fetch application counts for each company
-  useEffect(() => {
-    const fetchApplicationCounts = async () => {
-      const counts = {};
-      await Promise.all(
-        companies.map(async (company) => {
-          try {
-            const { data } = await client.query({
-              query: GET_APPLICATIONS_BY_COMPANY,
-              variables: { companyId: company.id },
-              fetchPolicy: 'network-only'
-            });
-            counts[company.id] = data?.applicationsByCompany?.length || 0;
-          } catch {
-            counts[company.id] = 0;
-          }
-        })
-      );
-      setCompanyApplicationCounts(counts);
-    };
-
-    if (companies.length > 0) {
-      fetchApplicationCounts();
-    }
-  }, [companies]);
-
   // Mutations
   const [createJob] = useMutation(CREATE_JOB);
   const [closeJob] = useMutation(CLOSE_JOB);
@@ -101,18 +73,6 @@ const CRCDashboard = () => {
   const [deleteJob] = useMutation(DELETE_JOB);
   const [updateApplicationStatus] = useMutation(UPDATE_APPLICATION_STATUS);
   const [createMyCompany] = useMutation(CREATE_MY_COMPANY);
-
-  // Branches list (matching EditUserSlideOver.jsx)
-  const BRANCHES = [
-    "Chemical Engineering",
-    "Civil Engineering",
-    "Computer Science and Engineering",
-    "Electrical Engineering",
-    "Electronics and Communication Engineering",
-    "Information Technology",
-    "Mechanical Engineering",
-    "Metallurgical and Materials Engineering"
-  ];
 
   // Forms
   const [newJob, setNewJob] = useState({
@@ -416,10 +376,10 @@ const CRCDashboard = () => {
   };
 
   const navLinks = [
-    { name: "Dashboard", tab: "dashboard", icon: <LayoutDashboard className="w-4 h-4" /> },
-    { name: "My Companies", tab: "companies", icon: <Building2 className="w-4 h-4" /> },
-    { name: "Manage Jobs", tab: "jobs", icon: <Briefcase className="w-4 h-4" /> },
-    { name: "Applications", tab: "applications", icon: <FileText className="w-4 h-4" /> },
+    { name: "Dashboard", tab: "dashboard", path: "/crc/dashboard", icon: <LayoutDashboard className="w-4 h-4" /> },
+    { name: "My Companies", tab: "companies", path: "/crc/companies", icon: <Building2 className="w-4 h-4" /> },
+    { name: "Manage Jobs", tab: "jobs", path: "/crc/jobs", icon: <Briefcase className="w-4 h-4" /> },
+    { name: "Applications", tab: "applications", path: "/crc/applications", icon: <FileText className="w-4 h-4" /> },
   ];
 
   const StatCard = ({ label, value, icon }) => (
@@ -440,7 +400,7 @@ const CRCDashboard = () => {
     : "https://api.dicebear.com/9.x/initials/svg?seed=C&backgroundColor=4f46e5&fontSize=40&textColor=ffffff";
 
   return (
-    <div className="flex min-h-screen bg-slate-50">
+    <div className="flex h-screen overflow-hidden bg-slate-50">
       {/* Mobile Backdrop */}
       {mobileSidebarOpen && (
         <div
@@ -453,7 +413,7 @@ const CRCDashboard = () => {
       {/* Sidebar */}
       <aside className={`
         fixed lg:sticky top-0 left-0 z-50 lg:z-auto
-        w-60 bg-slate-900 min-h-screen flex flex-col
+        w-60 h-screen bg-slate-900 flex flex-col overflow-hidden
         transition-transform duration-300 ease-in-out
         ${mobileSidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
       `}>
@@ -490,25 +450,23 @@ const CRCDashboard = () => {
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 p-3">
+        <nav className="flex-1 overflow-y-auto p-3">
           <ul className="space-y-1">
             {navLinks.map((link) => {
               return (
                 <li key={link.tab}>
-                  <button
-                    onClick={() => {
-                      setActiveTab(link.tab);
-                      setMobileSidebarOpen(false);
-                    }}
-                    className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
-                      activeTab === link.tab
+                  <NavLink
+                    to={link.path}
+                    onClick={() => setMobileSidebarOpen(false)}
+                    className={({ isActive }) => `w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
+                      isActive
                         ? "bg-gradient-to-r from-indigo-600 to-indigo-700 text-white shadow-md shadow-indigo-900/20"
                         : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/50"
                     }`}
                   >
                     {link.icon}
                     {link.name}
-                  </button>
+                  </NavLink>
                 </li>
               );
             })}
@@ -541,7 +499,7 @@ const CRCDashboard = () => {
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 overflow-y-auto transition-transform duration-300 ease-in-out">
+      <main className="flex-1 min-w-0 h-screen overflow-y-auto transition-transform duration-300 ease-in-out">
         {/* Mobile Header - Hidden on Desktop */}
         <header className={`lg:hidden sticky top-0 z-[60] bg-white border-b border-slate-200 px-4 py-3 flex items-center gap-3 transition-transform duration-300 ease-in-out ${mobileSidebarOpen ? 'translate-x-60' : ''}`}>
           <button
@@ -1059,7 +1017,7 @@ const CRCDashboard = () => {
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {companies.map((company) => {
-                const count = companyApplicationCounts[company.id] ?? 0;
+                const count = company.applicationCount ?? 0;
                 return (
                   <button
                     key={company.id}
@@ -1256,13 +1214,15 @@ const CompanyApplications = ({ companyId, updateApplicationStatus }) => {
   });
   const applications = data?.applicationsByCompany || [];
   const [selectedStudent, setSelectedStudent] = useState(null);
+  const [statusError, setStatusError] = useState("");
 
   const handleStatusChange = async (applicationId, status) => {
     try {
+      setStatusError("");
       await updateApplicationStatus({ variables: { applicationId, status } });
       refetch();
     } catch (err) {
-      alert(err.message);
+      setStatusError(err.message || "Failed to update application status");
     }
   };
 
@@ -1278,7 +1238,6 @@ const CompanyApplications = ({ companyId, updateApplicationStatus }) => {
 
   const exportToExcel = () => {
     if (applications.length === 0) {
-      alert("No applications to export");
       return;
     }
 
@@ -1313,7 +1272,10 @@ const CompanyApplications = ({ companyId, updateApplicationStatus }) => {
     <>
       <div className="bg-white border border-zinc-100 rounded-xl overflow-hidden">
         <div className="px-5 py-4 border-b border-zinc-100 flex items-center justify-between">
-          <h3 className="text-sm font-semibold text-zinc-900">Applications</h3>
+          <div>
+            <h3 className="text-sm font-semibold text-zinc-900">Applications</h3>
+            {statusError && <p className="text-xs text-red-600 mt-1">{statusError}</p>}
+          </div>
           {applications.length > 0 && (
             <button
               onClick={exportToExcel}

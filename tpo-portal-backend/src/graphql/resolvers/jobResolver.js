@@ -1,9 +1,10 @@
 const prisma = require('../../config/prismaClient');
 const { authorize, crcCompanyCheck } = require('../../middleware/auth');
 const { validateCreateJob } = require('../../utils/validation');
-const { logApplication, logAudit, logger } = require('../../utils/logger');
-const { addBulkJobs, isQueueAvailable } = require('../../queues/emailQueue');
+const { logAudit, logger } = require('../../utils/logger');
+const { addBulkJobs } = require('../../queues/emailQueue');
 const { sendJobNotificationEmail } = require('../../utils/email');
+const { normalizeBranchName } = require('../../utils/branches');
 
 /**
  * Validate salary fields based on job type
@@ -81,6 +82,10 @@ module.exports = {
 
     // Add application count
     _applicationCount: async (job, _, __) => {
+      if (job._count?.applications !== undefined) {
+        return job._count.applications;
+      }
+
       const count = await prisma.application.count({
         where: { jobId: job.id }
       });
@@ -91,18 +96,14 @@ module.exports = {
     _isEligible: async (job, _, { user }) => {
       if (!user || (user.role !== 'STUDENT' && user.role !== 'CRC')) return null;
 
-      const student = await prisma.user.findUnique({
-        where: { id: user.id }
-      });
-
-      if (!student || student.cgpa === null) return false;
+      if (user.cgpa === null || user.cgpa === undefined) return false;
 
       // Check CGPA
-      if (student.cgpa < job.minCgpa) return false;
+      if (user.cgpa < job.minCgpa) return false;
 
       // Check branch (if eligibleBranches is set, student must be in one of them)
       if (job.eligibleBranches && job.eligibleBranches.length > 0) {
-        if (!student.branch || !job.eligibleBranches.includes(student.branch)) {
+        if (!user.branch || !job.eligibleBranches.includes(user.branch)) {
           return false;
         }
       }
@@ -144,7 +145,10 @@ module.exports = {
       const jobs = await prisma.job.findMany({
         where,
         include: {
-          company: true
+          company: true,
+          _count: {
+            select: { applications: true }
+          }
         },
         orderBy: { createdAt: 'desc' }
       });
@@ -160,7 +164,10 @@ module.exports = {
       const job = await prisma.job.findUnique({
         where: { id: parseInt(id) },
         include: {
-          company: true
+          company: true,
+          _count: {
+            select: { applications: true }
+          }
         }
       });
 
@@ -182,7 +189,10 @@ module.exports = {
       return await prisma.job.findMany({
         where: { companyId: parseInt(companyId) },
         include: {
-          company: true
+          company: true,
+          _count: {
+            select: { applications: true }
+          }
         },
         orderBy: { createdAt: 'desc' }
       });
@@ -213,7 +223,10 @@ module.exports = {
           ]
         },
         include: {
-          company: true
+          company: true,
+          _count: {
+            select: { applications: true }
+          }
         },
         orderBy: { createdAt: 'desc' }
       });
@@ -382,7 +395,13 @@ module.exports = {
       if (input.description !== undefined) updateData.description = input.description;
       if (input.minCgpa !== undefined) updateData.minCgpa = input.minCgpa;
       if (input.requiredSkills) updateData.requiredSkills = input.requiredSkills;
-      if (input.eligibleBranches) updateData.eligibleBranches = input.eligibleBranches;
+      if (input.eligibleBranches) {
+        const normalizedBranches = input.eligibleBranches.map((branch) => normalizeBranchName(branch));
+        if (normalizedBranches.some((branch) => !branch)) {
+          throw new Error('Invalid eligible branch');
+        }
+        updateData.eligibleBranches = normalizedBranches;
+      }
       if (input.status) updateData.status = input.status;
       updateData.jobType = validatedData.jobType;
       updateData.stipendAmount = validatedData.stipendAmount;

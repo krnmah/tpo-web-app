@@ -1,11 +1,15 @@
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
-const { logger } = require('./logger');
+const { randomInt } = require('crypto');
 
 // JWT configuration
-const JWT_SECRET = process.env.JWT_SECRET || 'default-secret-key';
+const JWT_SECRET = process.env.JWT_SECRET || (process.env.NODE_ENV === 'production' ? null : 'development-secret-key');
 const JWT_EXPIRY = '24h'; // 24 hours
 const SALT_ROUNDS = 12;
+
+if (!JWT_SECRET) {
+  throw new Error('JWT_SECRET is required when NODE_ENV=production');
+}
 
 /**
  * Generate JWT token for user
@@ -65,7 +69,7 @@ async function comparePassword(password, hash) {
  * @returns {string} - 6-digit OTP
  */
 function generateOTP() {
-  return Math.floor(100000 + Math.random() * 900000).toString();
+  return randomInt(100000, 1000000).toString();
 }
 
 /**

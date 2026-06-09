@@ -7,10 +7,10 @@ const StudentLayout = () => {
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
 
   return (
-    <div className="flex min-h-screen bg-zinc-50">
+    <div className="flex h-screen overflow-hidden bg-zinc-50">
       <Sidebar mobileOpen={mobileSidebarOpen} onClose={() => setMobileSidebarOpen(false)} />
 
-      <main className="flex-1 overflow-y-auto transition-transform duration-300 ease-in-out">
+      <main className="flex-1 min-w-0 h-screen overflow-y-auto transition-transform duration-300 ease-in-out">
         {/* Mobile Header - Hidden on Desktop */}
         <header className={`lg:hidden sticky top-0 z-[60] bg-white border-b border-zinc-200 px-4 py-3 flex items-center gap-3 transition-transform duration-300 ease-in-out ${mobileSidebarOpen ? 'translate-x-60' : ''}`}>
           <button

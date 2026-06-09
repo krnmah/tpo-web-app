@@ -23,6 +23,7 @@ async function authenticate(authorization) {
         role: true,
         name: true,
         enrollmentNumber: true,
+        branch: true,
         cgpa: true,
         skills: true,
         resumeUrl: true

@@ -244,14 +244,12 @@ const AdminDashboard = () => {
     setEditPanelOpen(true);
   };
 
-  const handleEditUserSuccess = (updatedUser) => {
-    console.log('handleEditUserSuccess called with:', updatedUser);
+  const handleEditUserSuccess = () => {
     setToast({ show: true, message: 'User updated successfully!', type: 'success' });
     setTimeout(() => setToast(prev => ({ ...prev, show: false })), 3000);
   };
 
   const handleEditUserError = (errorMessage) => {
-    console.log('handleEditUserError called with:', errorMessage);
     setToast({ show: true, message: errorMessage, type: 'error' });
     setTimeout(() => setToast(prev => ({ ...prev, show: false })), 3000);
   };
@@ -317,7 +315,7 @@ const AdminDashboard = () => {
     : "https://api.dicebear.com/9.x/initials/svg?seed=A&backgroundColor=3B82F6&fontSize=40&textColor=ffffff";
 
   return (
-    <div className="flex min-h-screen bg-gray-50">
+    <div className="flex h-screen overflow-hidden bg-gray-50">
       {/* Mobile Backdrop */}
       {mobileSidebarOpen && (
         <div
@@ -330,7 +328,7 @@ const AdminDashboard = () => {
       {/* Sidebar */}
       <aside className={`
         fixed lg:sticky top-0 left-0 z-50 lg:z-auto
-        w-64 bg-white border-r border-gray-200 min-h-screen flex flex-col
+        w-64 h-screen bg-white border-r border-gray-200 flex flex-col overflow-hidden
         transition-transform duration-300 ease-in-out
         ${mobileSidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
       `}>
@@ -353,7 +351,7 @@ const AdminDashboard = () => {
           </button>
         </div>
 
-        <nav className="flex-1 p-4">
+        <nav className="flex-1 overflow-y-auto p-4">
           <ul className="space-y-1">
             {navLinks.map((link) => {
               const Icon = link.icon;
@@ -396,7 +394,7 @@ const AdminDashboard = () => {
         </div>
       </aside>
 
-      <main className="flex-1 overflow-y-auto transition-transform duration-300 ease-in-out">
+      <main className="flex-1 min-w-0 h-screen overflow-y-auto transition-transform duration-300 ease-in-out">
         {/* Mobile Header - Hidden on Desktop */}
         <header className={`lg:hidden sticky top-0 z-[60] bg-white border-b border-gray-200 px-4 py-3 flex items-center gap-3 transition-transform duration-300 ease-in-out ${mobileSidebarOpen ? 'translate-x-64' : ''}`}>
           <button

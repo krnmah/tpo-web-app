@@ -1,0 +1,10 @@
+metric,value
+users,729
+companies,96
+jobs,176
+applications,350
+skipped_users,63
+skipped_applications,15
+default_password_plaintext,Student@2026
+placeholder_pdf,https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf
+invalid_email_rule,must match email format and end with @nitsri.ac.in

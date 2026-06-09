@@ -86,7 +86,7 @@ const Sidebar = ({ mobileOpen, onClose }) => {
       {/* Sidebar */}
       <aside className={`
         fixed lg:sticky top-0 left-0 z-50 lg:z-auto
-        w-60 bg-zinc-900 min-h-screen flex flex-col
+        w-60 h-screen bg-zinc-900 flex flex-col overflow-hidden
         transition-transform duration-300 ease-in-out
         ${mobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
       `}>
@@ -121,7 +121,7 @@ const Sidebar = ({ mobileOpen, onClose }) => {
       )}
 
       {/* Navigation */}
-      <nav className="flex-1 p-3">
+      <nav className="flex-1 overflow-y-auto p-3">
         <ul className="space-y-1">
           {links.map((link) => {
             const Icon = link.icon;

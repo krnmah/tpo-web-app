@@ -76,7 +76,6 @@ export const AuthProvider = ({ children }) => {
     }
     inactivityTimerRef.current = setTimeout(() => {
       logout();
-      console.log("Logged out due to inactivity");
     }, 10 * 60 * 1000); // 10 minutes
   }, [logout]);
 
@@ -120,7 +119,7 @@ export const AuthProvider = ({ children }) => {
         clearTimeout(activityTimeout);
       }
     };
-  }, []); // Empty deps - run once on mount
+  }, [resetInactivityTimer]);
 
   // Listen for storage changes (other tabs/windows)
   useEffect(() => {

@@ -3,6 +3,7 @@ const PizZip = require('pizzip');
 const Docxtemplater = require('docxtemplater');
 const fs = require('fs');
 const path = require('path');
+const { logger } = require('../utils/logger');
 
 const router = express.Router();
 
@@ -60,7 +61,7 @@ router.post('/generate', async (req, res) => {
     // Send the file
     res.send(buf);
   } catch (error) {
-    console.error('Error generating NOC:', error);
+    logger.error('Error generating NOC', { error: error.message });
     res.status(500).json({ error: 'Failed to generate NOC document' });
   }
 });

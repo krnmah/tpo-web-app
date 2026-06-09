@@ -278,6 +278,8 @@ export const GET_COMPANIES = gql`
       createdAt
       updatedAt
       hasActiveJobs
+      activeJobCount
+      applicationCount
     }
   }
 `;
@@ -295,6 +297,8 @@ export const GET_COMPANY = gql`
       }
       createdAt
       updatedAt
+      activeJobCount
+      applicationCount
     }
   }
 `;
@@ -312,6 +316,8 @@ export const CREATE_COMPANY = gql`
       }
       createdAt
       updatedAt
+      activeJobCount
+      applicationCount
     }
   }
 `;
@@ -329,6 +335,8 @@ export const UPDATE_COMPANY = gql`
       }
       createdAt
       updatedAt
+      activeJobCount
+      applicationCount
     }
   }
 `;
@@ -352,6 +360,8 @@ export const ASSIGN_CRC_TO_COMPANY = gql`
       }
       createdAt
       updatedAt
+      activeJobCount
+      applicationCount
     }
   }
 `;
@@ -369,6 +379,8 @@ export const GET_MY_ASSIGNED_COMPANIES = gql`
       }
       createdAt
       updatedAt
+      activeJobCount
+      applicationCount
     }
   }
 `;
