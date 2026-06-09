@@ -326,7 +326,12 @@ module.exports = {
                     studentName: student.name,
                     companyName: job.company.name,
                     jobTitle: job.title,
-                    minCgpa: job.minCgpa
+                    minCgpa: job.minCgpa,
+                    jobId: job.id,
+                    jobType: job.jobType,
+                    stipendAmount: job.stipendAmount,
+                    ppoAmount: job.ppoAmount,
+                    ctcAmount: job.ctcAmount
                   }
                 },
                 opts: {
@@ -353,7 +358,12 @@ module.exports = {
                 emails: studentEmails,
                 companyName: job.company.name,
                 jobTitle: job.title,
-                minCgpa: job.minCgpa
+                minCgpa: job.minCgpa,
+                jobId: job.id,
+                jobType: job.jobType,
+                stipendAmount: job.stipendAmount,
+                ppoAmount: job.ppoAmount,
+                ctcAmount: job.ctcAmount
               });
 
               logger.info('Job notification emails sent via fallback', {
@@ -467,7 +477,12 @@ module.exports = {
             emails: studentEmails,
             companyName: updated.company.name,
             jobTitle: updated.title,
-            minCgpa: updated.minCgpa
+            minCgpa: updated.minCgpa,
+            jobId: updated.id,
+            jobType: updated.jobType,
+            stipendAmount: updated.stipendAmount,
+            ppoAmount: updated.ppoAmount,
+            ctcAmount: updated.ctcAmount
           });
         }
       }

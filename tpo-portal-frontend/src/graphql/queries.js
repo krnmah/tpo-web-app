@@ -468,7 +468,12 @@ export const GET_JOB = gql`
       }
       minCgpa
       requiredSkills
+      eligibleBranches
       status
+      jobType
+      stipendAmount
+      ppoAmount
+      ctcAmount
       createdAt
       updatedAt
       _applicationCount

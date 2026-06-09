@@ -74,6 +74,7 @@ const AdminDashboard = () => {
   const [selectedBatch, setSelectedBatch] = useState("All");
   const [searchEnrollment, setSearchEnrollment] = useState("");
   const [statsBranchFilter, setStatsBranchFilter] = useState("All");
+  const [placedStudentSearch, setPlacedStudentSearch] = useState("");
 
   // Company CRC assignment state
   const [companyName, setCompanyName] = useState("");
@@ -147,6 +148,10 @@ const AdminDashboard = () => {
   });
 
   const placedStudents = placedStudentsData?.placedStudents || [];
+  const placedStudentSearchQuery = placedStudentSearch.trim().toLowerCase();
+  const filteredPlacedStudents = placedStudentSearchQuery
+    ? placedStudents.filter((student) => student.name?.toLowerCase().includes(placedStudentSearchQuery))
+    : placedStudents;
   const filteredPlacementStats = placementStatsData?.placementStats || {
     totalStudents: 0,
     placedStudents: 0,
@@ -1021,10 +1026,34 @@ const AdminDashboard = () => {
                   </div>
                   <div>
                     <h3 className="text-sm font-semibold text-gray-900">Placed Students</h3>
-                    <p className="text-xs text-gray-500">{placedStudents.length} students placed</p>
+                    <p className="text-xs text-gray-500">
+                      {placedStudents.length} students placed{placedStudentSearch ? ` · ${filteredPlacedStudents.length} shown` : ""}
+                    </p>
                   </div>
                 </div>
-                <div className="flex items-center gap-2 sm:gap-3">
+                <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
+                  <div className="relative">
+                    <input
+                      type="text"
+                      placeholder="Search student name..."
+                      value={placedStudentSearch}
+                      onChange={(e) => setPlacedStudentSearch(e.target.value)}
+                      className="w-full sm:w-56 pl-9 pr-8 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 placeholder-gray-400"
+                    />
+                    <svg className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
+                    {placedStudentSearch && (
+                      <button
+                        type="button"
+                        onClick={() => setPlacedStudentSearch("")}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                        aria-label="Clear placed student search"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    )}
+                  </div>
                   <label className="text-sm text-gray-600 font-medium whitespace-nowrap">Branch:</label>
                   <select
                     value={statsBranchFilter}
@@ -1054,7 +1083,7 @@ const AdminDashboard = () => {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100">
-                    {placedStudents.map((student) => (
+                    {filteredPlacedStudents.map((student) => (
                       <tr key={student.id} className="hover:bg-gray-50 transition-colors">
                         <td className="px-6 py-4">
                           <div className="flex items-center gap-3">
@@ -1079,14 +1108,16 @@ const AdminDashboard = () => {
                         <td className="px-6 py-4 text-sm text-gray-500">{formatDate(student.placedAt)}</td>
                       </tr>
                     ))}
-                    {placedStudents.length === 0 && (
+                    {filteredPlacedStudents.length === 0 && (
                       <tr>
                         <td colSpan="6" className="px-6 py-12 text-center">
                           <div className="flex flex-col items-center gap-3">
                             <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center">
                               <Check className="w-6 h-6 text-gray-400" />
                             </div>
-                            <p className="text-sm text-gray-500">No placed students found</p>
+                            <p className="text-sm text-gray-500">
+                              {placedStudentSearch ? `No placed students found matching "${placedStudentSearch}"` : "No placed students found"}
+                            </p>
                           </div>
                         </td>
                       </tr>

@@ -1,10 +1,9 @@
-import { useQuery, useMutation } from "@apollo/client";
+import { useQuery } from "@apollo/client";
 import { useState } from "react";
-import { Link } from "react-router-dom";
-import { GET_ELIGIBLE_JOBS, APPLY_FOR_JOB, GET_MY_APPLICATIONS } from "../../graphql/queries";
+import { Link, useNavigate } from "react-router-dom";
+import { GET_ELIGIBLE_JOBS, GET_MY_APPLICATIONS } from "../../graphql/queries";
 import { getSalaryDisplay } from "../../utils/formatCurrency";
 import { BRANCHES } from "../../constants/branches";
-import JobDetailsModal from "../../components/JobDetailsModal";
 import {
   Briefcase,
   ArrowRight,
@@ -18,31 +17,19 @@ const JOB_TYPE_OPTIONS = [
 ];
 
 const EligibleCompanies = () => {
-  const [errorMessage, setErrorMessage] = useState("");
+  const navigate = useNavigate();
   const [searchJob, setSearchJob] = useState("");
   const [selectedBranch, setSelectedBranch] = useState("All");
   const [selectedJobType, setSelectedJobType] = useState("All");
-  const [selectedJob, setSelectedJob] = useState(null);
-  const { data, loading, refetch } = useQuery(GET_ELIGIBLE_JOBS, {
+  const { data, loading } = useQuery(GET_ELIGIBLE_JOBS, {
     fetchPolicy: "network-only"
   });
-  const { data: applicationsData, refetch: refetchApplications } = useQuery(GET_MY_APPLICATIONS, {
+  const { data: applicationsData } = useQuery(GET_MY_APPLICATIONS, {
     fetchPolicy: "network-only"
   });
-  const [applyJob, { loading: applying }] = useMutation(APPLY_FOR_JOB);
 
   const myApplications = applicationsData?.myApplications || [];
   const appliedJobIds = myApplications.map(app => String(app.job?.id));
-
-  const handleApply = async (jobId) => {
-    try {
-      setErrorMessage("");
-      await applyJob({ variables: { jobId } });
-      await Promise.all([refetch(), refetchApplications()]);
-    } catch (err) {
-      setErrorMessage(err.message || "Failed to apply for job");
-    }
-  };
 
   const jobs = data?.eligibleJobs || [];
   const searchQuery = searchJob.trim().toLowerCase();
@@ -57,8 +44,6 @@ const EligibleCompanies = () => {
 
     return searchMatch && branchMatch && jobTypeMatch;
   });
-  const selectedJobApplied = selectedJob ? appliedJobIds.includes(String(selectedJob.id)) : false;
-
   // Branch abbreviation helper
   const abbreviateBranch = (b) => {
     if (b.includes('Computer Science')) return 'CSE';
@@ -126,12 +111,6 @@ const EligibleCompanies = () => {
         </select>
       </div>
 
-      {errorMessage && (
-        <div className="rounded-lg border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-700">
-          {errorMessage}
-        </div>
-      )}
-
       {/* Empty State */}
       {jobs.length === 0 && !loading ? (
         <div className="bg-white border border-zinc-100 rounded-xl p-12 text-center">
@@ -160,11 +139,11 @@ const EligibleCompanies = () => {
             return (
               <div
                 key={job.id}
-                onClick={() => setSelectedJob(job)}
+                onClick={() => navigate(`/student/eligible-companies/${job.id}`)}
                 onKeyDown={(event) => {
                   if (event.key === "Enter" || event.key === " ") {
                     event.preventDefault();
-                    setSelectedJob(job);
+                    navigate(`/student/eligible-companies/${job.id}`);
                   }
                 }}
                 role="button"
@@ -230,7 +209,7 @@ const EligibleCompanies = () => {
                   type="button"
                   onClick={(event) => {
                     event.stopPropagation();
-                    setSelectedJob(job);
+                    navigate(`/student/eligible-companies/${job.id}`);
                   }}
                   className="w-full py-1.5 text-sm rounded-md font-medium transition bg-zinc-900 text-white hover:bg-zinc-800"
                 >
@@ -258,16 +237,6 @@ const EligibleCompanies = () => {
           ))}
         </div>
       )}
-
-      <JobDetailsModal
-        job={selectedJob}
-        isOpen={Boolean(selectedJob)}
-        onClose={() => setSelectedJob(null)}
-        onApply={handleApply}
-        isApplied={selectedJobApplied}
-        isEligible={true}
-        applying={applying}
-      />
     </div>
   );
 };

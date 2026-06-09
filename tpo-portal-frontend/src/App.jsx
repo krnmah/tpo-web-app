@@ -13,6 +13,7 @@ const StudentLayout = lazy(() => import("./pages/student/StudentLayout"));
 const Profile = lazy(() => import("./pages/student/Profile"));
 const AllJobs = lazy(() => import("./pages/student/AllCompanies"));
 const EligibleCompanies = lazy(() => import("./pages/student/EligibleCompanies"));
+const StudentJobDetails = lazy(() => import("./pages/student/JobDetailsPage"));
 const Applications = lazy(() => import("./pages/student/ApplicationTracker"));
 const StudentDashboard = lazy(() => import("./pages/student/StudentDashboard"));
 const NOCSection = lazy(() => import("./pages/student/NOCSection"));
@@ -47,9 +48,15 @@ const PAGE_TITLES = {
   "/admin/stats": "Stats",
 };
 
+const ROUTE_TITLE_PREFIXES = [
+  { prefix: "/student/all-jobs/", title: "Job Details" },
+  { prefix: "/student/eligible-companies/", title: "Job Details" },
+];
+
 const getDocumentTitle = (pathname) => {
   const normalizedPath = pathname.replace(/\/+$/, "") || "/home";
-  const pageTitle = PAGE_TITLES[normalizedPath];
+  const matchedDynamicRoute = ROUTE_TITLE_PREFIXES.find(({ prefix }) => normalizedPath.startsWith(prefix));
+  const pageTitle = PAGE_TITLES[normalizedPath] || matchedDynamicRoute?.title;
 
   return pageTitle ? `${pageTitle} - ${APP_TITLE}` : APP_TITLE;
 };
@@ -131,7 +138,9 @@ function AppRoutes() {
           <Route path="dashboard" element={<StudentDashboard />} />
           <Route path="profile" element={<Profile />} />
           <Route path="all-jobs" element={<AllJobs />} />
+          <Route path="all-jobs/:jobId" element={<StudentJobDetails />} />
           <Route path="eligible-companies" element={<EligibleCompanies />} />
+          <Route path="eligible-companies/:jobId" element={<StudentJobDetails />} />
           <Route path="applications" element={<Applications />} />
           <Route path="noc" element={<NOCSection />} />
         </Route>

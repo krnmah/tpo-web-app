@@ -81,6 +81,154 @@ function initEmail() {
   return transporter;
 }
 
+function buildJobDetailsUrl(jobId) {
+  const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+  return jobId
+    ? `${frontendUrl.replace(/\/+$/, '')}/student/eligible-companies/${jobId}`
+    : `${frontendUrl.replace(/\/+$/, '')}/student/all-jobs`;
+}
+
+const JOB_TYPE_LABELS = {
+  INTERN_ONLY: 'Intern Only',
+  INTERN_PPO: 'Intern + PPO',
+  INTERN_FTE: 'Intern + FTE',
+  FTE_ONLY: 'FTE Only'
+};
+
+function formatJobType(jobType) {
+  return JOB_TYPE_LABELS[jobType] || (jobType ? jobType.replace(/_/g, ' ') : 'Not specified');
+}
+
+function formatMoney(value) {
+  if (value === null || value === undefined || value === '') return null;
+
+  const amount = Number(value);
+  if (!Number.isFinite(amount)) return null;
+
+  return `Rs. ${new Intl.NumberFormat('en-IN', {
+    maximumFractionDigits: Number.isInteger(amount) ? 0 : 2
+  }).format(amount)}`;
+}
+
+function buildDetailRow(label, value) {
+  if (value === null || value === undefined || value === '') return '';
+
+  return `
+    <tr>
+      <td class="detail-label">${label}</td>
+      <td class="detail-value">${value}</td>
+    </tr>
+  `;
+}
+
+function buildJobNotificationHtml({
+  studentName,
+  companyName,
+  jobTitle,
+  minCgpa,
+  jobId,
+  jobType,
+  stipendAmount,
+  ppoAmount,
+  ctcAmount
+}) {
+  const jobDetailsUrl = buildJobDetailsUrl(jobId);
+  const stipend = formatMoney(stipendAmount);
+  const ppo = formatMoney(ppoAmount);
+  const ctc = formatMoney(ctcAmount);
+
+  return `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="color-scheme" content="light dark">
+      <meta name="supported-color-schemes" content="light dark">
+      <title>New Job Opportunity</title>
+      <style>
+        :root { color-scheme: light dark; supported-color-schemes: light dark; }
+        body { margin: 0; padding: 0; background: #f4f6fb; color: #1f2937; font-family: Arial, sans-serif; line-height: 1.6; }
+        a { color: inherit; }
+        .preheader { display: none; max-height: 0; overflow: hidden; opacity: 0; color: transparent; }
+        .shell { max-width: 640px; margin: 0 auto; padding: 24px 16px; background: #f4f6fb; }
+        .header { background: #0f172a; color: #ffffff; padding: 28px 24px; border-radius: 14px 14px 0 0; }
+        .eyebrow { margin: 0 0 8px; color: #bfdbfe; font-size: 13px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; }
+        .header h1 { margin: 0; font-size: 24px; line-height: 1.25; color: #ffffff; }
+        .header p { margin: 10px 0 0; color: #dbeafe; font-size: 14px; }
+        .content { background: #ffffff; border: 1px solid #e5e7eb; border-top: 0; border-radius: 0 0 14px 14px; padding: 28px 24px; }
+        .content p { color: #374151; }
+        .job-card { background: #f8fafc; border: 1px solid #e5e7eb; border-left: 4px solid #2563eb; border-radius: 10px; margin: 22px 0; padding: 20px; }
+        .job-title { color: #111827; font-size: 20px; font-weight: 700; line-height: 1.3; margin-bottom: 6px; }
+        .company-name { color: #4b5563; font-size: 15px; margin-bottom: 16px; }
+        .badge { display: inline-block; background: #dbeafe; color: #1d4ed8; border-radius: 999px; font-size: 12px; font-weight: 700; padding: 5px 10px; margin: 0 0 14px; }
+        .details { width: 100%; border-collapse: collapse; margin-top: 6px; }
+        .details tr { border-top: 1px solid #e5e7eb; }
+        .details tr:first-child { border-top: 0; }
+        .detail-label { color: #6b7280; font-size: 13px; padding: 10px 8px 10px 0; vertical-align: top; width: 42%; }
+        .detail-value { color: #111827; font-size: 14px; font-weight: 700; padding: 10px 0; vertical-align: top; }
+        .cta-wrap { text-align: center; margin: 24px 0 10px; }
+        .btn { display: inline-block; padding: 12px 28px; background: #2563eb; color: #ffffff !important; text-decoration: none; border-radius: 8px; font-size: 14px; font-weight: 700; }
+        .note { color: #6b7280; font-size: 13px; margin-top: 18px; }
+        .footer { color: #6b7280; text-align: center; margin-top: 26px; font-size: 12px; }
+
+        @media (prefers-color-scheme: dark) {
+          body, .shell { background: #0f172a !important; color: #e5e7eb !important; }
+          .header { background: #020617 !important; color: #ffffff !important; }
+          .eyebrow { color: #93c5fd !important; }
+          .header p { color: #bfdbfe !important; }
+          .content { background: #111827 !important; border-color: #374151 !important; }
+          .content p { color: #d1d5db !important; }
+          .job-card { background: #1f2937 !important; border-color: #374151 !important; border-left-color: #60a5fa !important; }
+          .job-title, .detail-value { color: #f9fafb !important; }
+          .company-name, .detail-label, .note, .footer { color: #9ca3af !important; }
+          .details tr { border-top-color: #374151 !important; }
+          .badge { background: #1e3a8a !important; color: #dbeafe !important; }
+          .btn { background: #3b82f6 !important; color: #ffffff !important; }
+        }
+      </style>
+    </head>
+    <body>
+      <span class="preheader">${companyName} posted ${jobTitle}. Open the T&P portal to view details and apply.</span>
+      <div class="shell">
+        <div class="header">
+          <p class="eyebrow">New job opportunity</p>
+          <h1>${jobTitle}</h1>
+          <p>You are eligible to view and apply for this job posting.</p>
+        </div>
+        <div class="content">
+          ${studentName ? `<p>Dear <strong>${studentName}</strong>,</p>` : '<p>Dear Student,</p>'}
+          <p>A new opportunity matching your profile has been posted on the Training & Placement Portal.</p>
+
+          <div class="job-card">
+            <div class="badge">${formatJobType(jobType)}</div>
+            <div class="job-title">${jobTitle}</div>
+            <div class="company-name"><strong>${companyName}</strong></div>
+            <table class="details" role="presentation" cellspacing="0" cellpadding="0">
+              ${buildDetailRow('Employment Type', formatJobType(jobType))}
+              ${buildDetailRow('Minimum CGPA', minCgpa)}
+              ${buildDetailRow('Stipend', stipend)}
+              ${buildDetailRow('PPO', ppo)}
+              ${buildDetailRow('CTC', ctc)}
+            </table>
+          </div>
+
+          <p class="note">Log in to the portal to see the full job description, eligibility details, and application status.</p>
+          <div class="cta-wrap">
+            <a href="${jobDetailsUrl}" class="btn">View Job Details</a>
+          </div>
+
+          <div class="footer">
+            <p>Training & Placement Office<br>NIT Srinagar</p>
+            <p>This is an automated email. Please do not reply.</p>
+          </div>
+        </div>
+      </div>
+    </body>
+    </html>
+  `;
+}
+
 /**
  * Send OTP email
  * @param {string} email - Recipient email
@@ -263,9 +411,24 @@ async function sendWelcomeEmail(email, name) {
  * @param {string} params.companyName - Name of the company
  * @param {string} params.jobTitle - Title of the job position
  * @param {number} params.minCgpa - Minimum CGPA required
+ * @param {number|string} params.jobId - Job posting id
+ * @param {string} params.jobType - Employment type
+ * @param {number} params.stipendAmount - Stipend amount when applicable
+ * @param {number} params.ppoAmount - PPO amount when applicable
+ * @param {number} params.ctcAmount - CTC amount when applicable
  * @returns {Promise<Object>} - Object with success count and failed emails
  */
-async function sendJobNotificationEmail({ emails, companyName, jobTitle, minCgpa }) {
+async function sendJobNotificationEmail({
+  emails,
+  companyName,
+  jobTitle,
+  minCgpa,
+  jobId,
+  jobType,
+  stipendAmount,
+  ppoAmount,
+  ctcAmount
+}) {
   const mailTransporter = initEmail();
 
   if (!mailTransporter) {
@@ -277,57 +440,16 @@ async function sendJobNotificationEmail({ emails, companyName, jobTitle, minCgpa
     from: process.env.EMAIL_FROM || `"TNP Portal" <${process.env.SMTP_USER}>`,
     bcc: emails.join(', '), // Use BCC to send to multiple students at once
     subject: `🎯 New Job Opportunity: ${jobTitle} at ${companyName}`,
-    html: `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <meta charset="utf-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>New Job Opportunity</title>
-        <style>
-          body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
-          .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-          .header { background: linear-gradient(135deg, #0B5ED7 0%, #0848a8 100%); color: white; padding: 25px 20px; text-align: center; border-radius: 12px 12px 0 0; }
-          .content { background: #f9f9f9; padding: 30px; border: 1px solid #ddd; border-radius: 0 0 12px 12px; }
-          .job-card { background: white; border-left: 4px solid #0B5ED7; padding: 20px; margin: 20px 0; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
-          .job-title { font-size: 20px; font-weight: bold; color: #0B5ED7; margin-bottom: 8px; }
-          .company-name { font-size: 16px; color: #555; margin-bottom: 15px; }
-          .requirement { background: #fff3cd; padding: 12px; border-radius: 6px; margin: 15px 0; }
-          .footer { text-align: center; margin-top: 25px; font-size: 12px; color: #777; }
-          .highlight { color: #0B5ED7; font-weight: bold; }
-        </style>
-      </head>
-      <body>
-        <div class="container">
-          <div class="header">
-            <h1>🎓 New Job Opportunity!</h1>
-            <p>You're eligible to apply</p>
-          </div>
-          <div class="content">
-            <p>Dear Student,</p>
-            <p>A new job opening has been posted that matches your profile!</p>
-
-            <div class="job-card">
-              <div class="job-title">${jobTitle}</div>
-              <div class="company-name">🏢 <strong>${companyName}</strong></div>
-              <div class="requirement">
-                <strong>📊 Minimum CGPA Required:</strong> <span class="highlight">${minCgpa}</span>
-              </div>
-            </div>
-
-            <p style="font-size: 14px; color: #666; margin-top: 20px;">
-              💡 <strong>Tip:</strong> Log in to the Training & Placement Portal to view more details and apply.
-            </p>
-
-            <div class="footer">
-              <p>NIT Srinagar Training & Placement Department</p>
-              <p>This is an automated email. Please do not reply.</p>
-            </div>
-          </div>
-        </div>
-      </body>
-      </html>
-    `
+    html: buildJobNotificationHtml({
+      companyName,
+      jobTitle,
+      minCgpa,
+      jobId,
+      jobType,
+      stipendAmount,
+      ppoAmount,
+      ctcAmount
+    })
   };
 
   try {
@@ -359,9 +481,25 @@ async function sendJobNotificationEmail({ emails, companyName, jobTitle, minCgpa
  * @param {string} params.companyName - Company name
  * @param {string} params.jobTitle - Job title
  * @param {number} params.minCgpa - Minimum CGPA required
+ * @param {number|string} params.jobId - Job posting id
+ * @param {string} params.jobType - Employment type
+ * @param {number} params.stipendAmount - Stipend amount when applicable
+ * @param {number} params.ppoAmount - PPO amount when applicable
+ * @param {number} params.ctcAmount - CTC amount when applicable
  * @returns {Promise<Object>} - Result with success status
  */
-async function sendIndividualJobEmail({ email, studentName, companyName, jobTitle, minCgpa }) {
+async function sendIndividualJobEmail({
+  email,
+  studentName,
+  companyName,
+  jobTitle,
+  minCgpa,
+  jobId,
+  jobType,
+  stipendAmount,
+  ppoAmount,
+  ctcAmount
+}) {
   const mailTransporter = initEmail();
 
   if (!mailTransporter) {
@@ -373,60 +511,17 @@ async function sendIndividualJobEmail({ email, studentName, companyName, jobTitl
     from: process.env.EMAIL_FROM || `"TNP Portal" <${process.env.SMTP_USER}>`,
     to: email,
     subject: `🎯 New Job Opportunity: ${jobTitle} at ${companyName}`,
-    html: `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <meta charset="utf-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>New Job Opportunity</title>
-        <style>
-          body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
-          .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-          .header { background: linear-gradient(135deg, #0B5ED7 0%, #0848a8 100%); color: white; padding: 25px 20px; text-align: center; border-radius: 12px 12px 0 0; }
-          .content { background: #f9f9f9; padding: 30px; border: 1px solid #ddd; border-radius: 0 0 12px 12px; }
-          .job-card { background: white; border-left: 4px solid #0B5ED7; padding: 20px; margin: 20px 0; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
-          .job-title { font-size: 20px; font-weight: bold; color: #0B5ED7; margin-bottom: 8px; }
-          .company-name { font-size: 16px; color: #555; margin-bottom: 15px; }
-          .requirement { background: #fff3cd; padding: 12px; border-radius: 6px; margin: 15px 0; }
-          .footer { text-align: center; margin-top: 25px; font-size: 12px; color: #777; }
-          .highlight { color: #0B5ED7; font-weight: bold; }
-          .btn { display: inline-block; padding: 12px 30px; background: #0B5ED7; color: white; text-decoration: none; border-radius: 6px; margin-top: 15px; }
-        </style>
-      </head>
-      <body>
-        <div class="container">
-          <div class="header">
-            <h1>🎯 New Job Opportunity</h1>
-          </div>
-          <div class="content">
-            ${studentName ? `<p>Dear <strong>${studentName}</strong>,</p>` : '<p>Dear Student,</p>'}
-            <p>A new job opportunity matching your profile has been posted on the TNP Portal.</p>
-
-            <div class="job-card">
-              <div class="job-title">${jobTitle}</div>
-              <div class="company-name">🏢 ${companyName}</div>
-              <div class="requirement">
-                <strong>Required CGPA:</strong> <span class="highlight">${minCgpa}+</span>
-              </div>
-            </div>
-
-            <p>Login to the TNP Portal to view details and apply:</p>
-            <p style="text-align: center;">
-              <a href="${process.env.FRONTEND_URL || 'http://localhost:5173'}/student/all-jobs" class="btn">View Jobs</a>
-            </p>
-
-            <div class="footer">
-              <p>Training & Placement Office<br>NIT Srinagar</p>
-              <p style="font-size: 11px; color: #999;">
-                This is an automated email. Please do not reply.
-              </p>
-            </div>
-          </div>
-        </div>
-      </body>
-      </html>
-    `
+    html: buildJobNotificationHtml({
+      studentName,
+      companyName,
+      jobTitle,
+      minCgpa,
+      jobId,
+      jobType,
+      stipendAmount,
+      ppoAmount,
+      ctcAmount
+    })
   };
 
   try {

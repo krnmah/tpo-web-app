@@ -70,8 +70,8 @@ async function startWorker() {
         connection,
         concurrency: 5, // Process 5 emails concurrently
         limiter: {
-          max: 10, // Max 10 emails per rate limit window
-          duration: 60000, // 1 minute window (10 emails/minute = safe for Gmail)
+          max: 30, // Max 30 emails per rate limit window
+          duration: 60000, // 1 minute window
         },
       }
     );

@@ -1,10 +1,10 @@
-import { useQuery, useMutation } from "@apollo/client";
+import { useQuery } from "@apollo/client";
 import { useState } from "react";
-import { GET_JOBS, APPLY_FOR_JOB, GET_MY_APPLICATIONS } from "../../graphql/queries";
+import { useNavigate } from "react-router-dom";
+import { GET_JOBS, GET_MY_APPLICATIONS } from "../../graphql/queries";
 import { getSalaryDisplay } from "../../utils/formatCurrency";
 import { useAuth } from "../../context/AuthContext";
 import { BRANCHES } from "../../constants/branches";
-import JobDetailsModal from "../../components/JobDetailsModal";
 
 const JOB_TYPE_OPTIONS = [
   { value: "INTERN_ONLY", label: "Intern Only" },
@@ -15,36 +15,23 @@ const JOB_TYPE_OPTIONS = [
 
 const AllCompanies = () => {
   const { user, activeRole } = useAuth();
-  const [errorMessage, setErrorMessage] = useState("");
+  const navigate = useNavigate();
   const [searchJob, setSearchJob] = useState("");
   const [selectedBranch, setSelectedBranch] = useState("All");
   const [selectedJobType, setSelectedJobType] = useState("All");
-  const [selectedJob, setSelectedJob] = useState(null);
   const isCRCStudentView = user?.role === 'CRC' && activeRole === 'STUDENT';
 
-  const { data, loading, refetch } = useQuery(GET_JOBS, {
+  const { data, loading } = useQuery(GET_JOBS, {
     variables: { status: "OPEN", studentView: isCRCStudentView },
     fetchPolicy: "network-only"
   });
-  const { data: applicationsData, refetch: refetchApplications } = useQuery(GET_MY_APPLICATIONS, {
+  const { data: applicationsData } = useQuery(GET_MY_APPLICATIONS, {
     fetchPolicy: "network-only"
   });
-  const [applyJob] = useMutation(APPLY_FOR_JOB);
 
   const myApplications = applicationsData?.myApplications || [];
   // Ensure consistent type comparison - convert both to strings
   const appliedJobIds = myApplications.map(app => String(app.job?.id));
-
-  const handleApply = async (jobId) => {
-    try {
-      setErrorMessage("");
-      await applyJob({ variables: { jobId } });
-      // Refetch both jobs and applications to update UI state
-      await Promise.all([refetch(), refetchApplications()]);
-    } catch (err) {
-      setErrorMessage(err.message || "Failed to apply for job");
-    }
-  };
 
   if (loading) {
     return (
@@ -67,9 +54,6 @@ const AllCompanies = () => {
 
     return searchMatch && branchMatch && jobTypeMatch;
   });
-
-  const selectedJobApplied = selectedJob ? appliedJobIds.includes(String(selectedJob.id)) : false;
-  const selectedJobEligible = selectedJob ? Boolean(selectedJob._isEligible) : false;
 
   return (
     <div>
@@ -117,11 +101,6 @@ const AllCompanies = () => {
           ))}
         </select>
       </div>
-      {errorMessage && (
-        <div className="mb-4 rounded-lg border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-700">
-          {errorMessage}
-        </div>
-      )}
       {jobs.length === 0 ? (
         <div className="bg-white p-6 rounded-lg shadow">
           <p className="text-gray-500">No open jobs available at the moment.</p>
@@ -139,11 +118,11 @@ const AllCompanies = () => {
             return (
               <div
                 key={job.id}
-                onClick={() => setSelectedJob(job)}
+                onClick={() => navigate(`/student/all-jobs/${job.id}`)}
                 onKeyDown={(event) => {
                   if (event.key === "Enter" || event.key === " ") {
                     event.preventDefault();
-                    setSelectedJob(job);
+                    navigate(`/student/all-jobs/${job.id}`);
                   }
                 }}
                 role="button"
@@ -230,7 +209,7 @@ const AllCompanies = () => {
                   type="button"
                   onClick={(event) => {
                     event.stopPropagation();
-                    setSelectedJob(job);
+                    navigate(`/student/all-jobs/${job.id}`);
                   }}
                   className="w-full py-1.5 text-sm rounded-md font-medium transition bg-zinc-900 text-white hover:bg-zinc-800"
                 >
@@ -241,15 +220,6 @@ const AllCompanies = () => {
           })}
         </div>
       )}
-
-      <JobDetailsModal
-        job={selectedJob}
-        isOpen={Boolean(selectedJob)}
-        onClose={() => setSelectedJob(null)}
-        onApply={handleApply}
-        isApplied={selectedJobApplied}
-        isEligible={selectedJobEligible}
-      />
     </div>
   );
 };
